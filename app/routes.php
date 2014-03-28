@@ -15,3 +15,18 @@ Route::get('/', function()
 {
 	return View::make('hello');
 });
+
+
+Route::get('documents/{vendor}/{id}', 'DocumentsController@getShow');
+
+//Route::controller('documents', 'DocumentsController');
+//Route::controller('subjects', 'SubjectsController');
+//Route::controller('covers', 'CoversController');
+
+
+App::missing(function($exception)
+{
+    return Response::view('errors.missing', array(
+    	'message' => $exception->getMessage()
+    ), 404);
+});

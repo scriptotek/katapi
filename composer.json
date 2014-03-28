@@ -1,11 +1,17 @@
 {
-	"name": "laravel/laravel",
-	"description": "The Laravel Framework.",
-	"keywords": ["framework", "laravel"],
+	"name": "danmichaelo/ok",
+	"description": "OpenKat, friendly representation of catalog data from SRU service.",
+	"keywords": ["SRU"],
 	"license": "MIT",
 	"require": {
-		"laravel/framework": "4.1.*"
+		"laravel/framework": "4.1.*",
+        "danmichaelo/simplemarcparser": "dev-master",
+        "rmccue/requests": "dev-master",
+        "scriptotek/sru-client": "dev-master"
 	},
+    "require-dev": {
+        "way/generators": "2.*"
+    },
 	"autoload": {
 		"classmap": [
 			"app/commands",
@@ -16,6 +22,12 @@
 			"app/tests/TestCase.php"
 		]
 	},
+    "repositories": [
+        {
+            "type": "vcs",
+            "url":  "https://github.com/scriptotek/php-sru-client.git"
+        }
+    ],
 	"scripts": {
 		"post-install-cmd": [
 			"php artisan clear-compiled",
@@ -32,5 +44,5 @@
 	"config": {
 		"preferred-install": "dist"
 	},
-	"minimum-stability": "stable"
+	"minimum-stability": "dev"
 }
