@@ -17,6 +17,7 @@ Route::get('/', function()
 });
 
 
+Route::get('{vendor}/search', 'DocumentsController@getSearch');
 Route::get('{vendor}/{id}', 'DocumentsController@getShow');
 
 //Route::controller('documents', 'DocumentsController');
