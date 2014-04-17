@@ -35,11 +35,11 @@ App::missing(function($exception)
 
 	if ($format->getValue() == 'text/html') {
 		return Response::view('errors.missing', array(
-			'message' => $exception->getMessage()
+			'message' => $exception->getMessage() ?: 'Page not found'
 		), 404);
 	} else if ($format->getValue() == 'application/json') {
 		return Response::json(array(
-			'error' => $exception->getMessage()
+			'error' => $exception->getMessage() ?: 'Page not found'
 		), 404);
 	}
 });
