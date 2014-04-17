@@ -1,0 +1,18 @@
+body {
+  background-color: #ebe8e1;
+}
+.container {
+  background-color: #fff;
+  padding: 2em;
+  -webkit-box-shadow: 0 2px 3px #D6D3CB;
+  box-shadow: 0 2px 3px #D6D3CB;
+  margin-top: 3em;
+}
+
+h1 {
+	font-size: 3em;
+	margin-top: 0;
+}
+h2 {
+	font-size: 1.4em;
+}

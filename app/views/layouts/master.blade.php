@@ -15,6 +15,8 @@
   <!-- Font Awesome -->
   <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
 
+  <link href="app.css" rel="stylesheet">
+
   <script src="app.js"></script>
 
 </head>
