@@ -9,6 +9,7 @@
         "rmccue/requests": "dev-master",
         "scriptotek/sru-client": "dev-master",
         "willdurand/negotiation": "1.2.*",
+		"guzzle/guzzle": "3.8.*"
 	},
     "require-dev": {
         "way/generators": "2.*",

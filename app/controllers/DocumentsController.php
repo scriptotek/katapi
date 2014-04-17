@@ -15,6 +15,7 @@ class DocumentsController extends BaseController {
 				'version' => '1.1',
 				'user-agent' => 'KatApi/0.1',
 			),
+			'preprocess' => 'lookupIds',
 		)
 	);
 
@@ -22,6 +23,31 @@ class DocumentsController extends BaseController {
 	{
 		// show search box?
 		return View::make('hello');
+	}
+
+	private function lookupIds($res) {
+
+		//$url = 'http://adminwebservices.bibsys.no/objectIdService/getObjectId?id=' . $id;
+		$url = 'http://adminwebservices.bibsys.no/objectIdService/getIds?id=' . $res['id'];
+
+        $http = new HttpClient;
+        $httpRes = $http->get($url)->send();
+        $response = trim($httpRes->getBody(true));
+
+		$ids = array();
+		$keys = array(
+			'objektId' => 'objektid',
+			'dokumentId' => 'dokid',
+			'hefteId' => 'heftid',
+		);
+		foreach (explode("\n", $response) as $line) {
+			list($key, $val) = explode(':', $line);
+			$ids[$keys[$key]] = trim($val);
+		}
+
+		$res['id'] = $ids['objektid'];
+		$res['ids'] = $ids;
+		return $res;
 	}
 
 	public function getShow($vendor, $id)
@@ -37,6 +63,13 @@ class DocumentsController extends BaseController {
 
 		$vendor = $this->vendors[$vendor];
 		$res = array('id' => $id);
+
+		if (isset($vendor['preprocess'])) {
+			$res = call_user_func_array(array($this,$vendor['preprocess']), array($res));
+			if (empty($res['id'])) {
+				App::abort(404, 'Record not found');
+			}
+		}
 
 		$sru = new SruClient($vendor['url'], $vendor['options']);
 		$query = 'rec.identifier="' . $res['id'] . '"';
