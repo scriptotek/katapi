@@ -2,6 +2,8 @@
 
 use Scriptotek\Sru\Client as SruClient;
 use Danmichaelo\SimpleMarcParser\BibliographicParser;
+use Danmichaelo\SimpleMarcParser\HoldingsParser;
+use \Guzzle\Http\Client as HttpClient;
 
 class DocumentsController extends BaseController {
 
@@ -9,10 +11,10 @@ class DocumentsController extends BaseController {
 		'bibsys' => array(
 			'url' => 'http://sru.bibsys.no/search/biblioholdings', 
 			'options' => array(
-			    'schema' => 'marcxchange',
-			    'version' => '1.1',
-			    'user-agent' => 'OpenKat/0.1'
-			)
+				'schema' => 'marcxchange',
+				'version' => '1.1',
+				'user-agent' => 'KatApi/0.1',
+			),
 		)
 	);
 
@@ -27,15 +29,17 @@ class DocumentsController extends BaseController {
 		$id = strtolower(trim($id));
 		$id = filter_var($id, FILTER_VALIDATE_REGEXP, array('options' => array('regexp'=>'([a-z0-9]+)')));
 		if (empty($id)) {
-			App::abort(404, 'Empty or invalid id');			
+			App::abort(404, 'Empty or invalid id');
 		}
 		if (!isset($this->vendors[$vendor])) {
 			App::abort(404, 'Vendor not found');
 		}
 
 		$vendor = $this->vendors[$vendor];
+		$res = array('id' => $id);
+
 		$sru = new SruClient($vendor['url'], $vendor['options']);
-		$query = 'rec.identifier="' . $id . '"';
+		$query = 'rec.identifier="' . $res['id'] . '"';
 
 		//die($sru->urlTo($query));
 		$response = $sru->search($query);
@@ -44,17 +48,31 @@ class DocumentsController extends BaseController {
 			App::abort(404, 'Record not found');
 		}
 
+		$data = $response->records[0]->data;
+
 		$parser = new BibliographicParser;
-		$r = $response->records[0]->data->first('metadata/marc:collection/marc:record');
+		$holdingsParser = new HoldingsParser;
+		$r = $data->first('metadata/marc:collection/marc:record[@type="Bibliographic"]');
 
 		$rec = $parser->parse($r);
+		$rec['holdings'] = array();
+
+		foreach ($data->xpath('metadata/marc:collection/marc:record[@type="Holdings"]') as $holding) {
+			$h = $holdingsParser->parse($holding);
+			$rec['holdings'][] = $h;
+		}
 
 		return Response::json($rec);
 	}
 
-	public function getSearch($query)
+	public function getSearch()
 	{
-		return 'Hello ' . $query;
+		if (!isset($_GET['cql'])) {
+			App::abort(404, 'No query given.');
+		}
+		$cql = $_GET['cql'];
+		$cql = filter_var($cql, FILTER_SANITIZE_URL);
+		return 'Hello ' . $cql;
 	}
 
 

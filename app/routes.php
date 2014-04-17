@@ -17,7 +17,7 @@ Route::get('/', function()
 });
 
 
-Route::get('documents/{vendor}/{id}', 'DocumentsController@getShow');
+Route::get('{vendor}/{id}', 'DocumentsController@getShow');
 
 //Route::controller('documents', 'DocumentsController');
 //Route::controller('subjects', 'SubjectsController');
@@ -26,7 +26,19 @@ Route::get('documents/{vendor}/{id}', 'DocumentsController@getShow');
 
 App::missing(function($exception)
 {
-    return Response::view('errors.missing', array(
-    	'message' => $exception->getMessage()
-    ), 404);
+	$negotiator = new \Negotiation\FormatNegotiator();
+	$acceptHeader = $_SERVER['HTTP_ACCEPT'];
+
+	$priorities = array('text/html', 'application/json');
+	$format = $negotiator->getBest($acceptHeader, $priorities);
+
+	if ($format->getValue() == 'text/html') {
+		return Response::view('errors.missing', array(
+			'message' => $exception->getMessage()
+		), 404);
+	} else if ($format->getValue() == 'application/json') {
+		return Response::json(array(
+			'error' => $exception->getMessage()
+		), 404);
+	}
 });
