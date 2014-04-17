@@ -27,6 +27,8 @@ class DocumentsController extends BaseController {
 
 	private function lookupIds($res) {
 
+		$res['id'] = strtolower($res['id']);
+
 		//$url = 'http://adminwebservices.bibsys.no/objectIdService/getObjectId?id=' . $id;
 		$url = 'http://adminwebservices.bibsys.no/objectIdService/getIds?id=' . $res['id'];
 
@@ -42,7 +44,12 @@ class DocumentsController extends BaseController {
 		);
 		foreach (explode("\n", $response) as $line) {
 			list($key, $val) = explode(':', $line);
-			$ids[$keys[$key]] = trim($val);
+			$ids[$keys[$key]] = strtolower(trim($val));
+		}
+
+		$ids['knyttid'] = '';
+		if (!in_array($res['id'], array($ids['dokid'], $ids['objektid']))) {
+			 $ids['knyttid'] = $res['id'];
 		}
 
 		$res['id'] = $ids['objektid'];
