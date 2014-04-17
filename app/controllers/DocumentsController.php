@@ -87,7 +87,7 @@ class DocumentsController extends BaseController {
 		$holdingsParser = new HoldingsParser;
 		$r = $data->first('metadata/marc:collection/marc:record[@type="Bibliographic"]');
 
-		$rec = $parser->parse($r);
+		$rec = array_merge($res, $parser->parse($r));
 		$rec['holdings'] = array();
 
 		foreach ($data->xpath('metadata/marc:collection/marc:record[@type="Holdings"]') as $holding) {
