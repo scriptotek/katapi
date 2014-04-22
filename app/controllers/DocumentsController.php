@@ -9,6 +9,8 @@ class DocumentsController extends BaseController {
 
 	protected $userAgent = 'KatApi/0.1';
 
+	protected $query = 'rec.identifier="{{id}}"';
+
 	public function getIndex()
 	{
 		// show search box?
@@ -18,7 +20,12 @@ class DocumentsController extends BaseController {
 	public function lookup($res) {
 
 		$sru = new SruClient($this->baseUrl, $this->sruOptions);
-		$query = 'rec.identifier="' . $res['id'] . '"';
+		if (isset($res['id'])) {
+			$query = str_replace('{{id}}', $res['id'], $this->query);
+		}
+		if (isset($res['isbn']) && count($res['isbn']) > 0) {
+			$query = str_replace('{{isbn}}', $res['isbn'][0], $this->query);
+		}
 		$response = $sru->search($query, 1, 1);
 
 		if (count($response->records) == 0) {

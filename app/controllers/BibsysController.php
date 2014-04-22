@@ -27,8 +27,6 @@ class BibsysController extends DocumentsController implements VendorInterface {
 
 	private function lookupIds($res) {
 
-		$res['id'] = strtolower($res['id']);
-
 		//$url = 'http://adminwebservices.bibsys.no/objectIdService/getObjectId?id=' . $id;
 		$url = 'http://adminwebservices.bibsys.no/objectIdService/getIds?id=' . $res['id'];
 
@@ -66,13 +64,22 @@ class BibsysController extends DocumentsController implements VendorInterface {
 	public function getShow($id)
 	{
 		$id = strtolower(trim($id));
+		$id = str_replace('-', '', $id);
 		$id = filter_var($id, FILTER_VALIDATE_REGEXP, array('options' => array('regexp'=>'([a-z0-9]+)')));
 		if (empty($id)) {
 			App::abort(404, 'Empty or invalid id');
 		}
+		if (strlen($id) == 9) {
+			$res = array('id' => $id);
+			$res = $this->lookupIds($res);
+			$this->query = 'rec.identifier="{{id}}"';
+		} else if (strlen($id) == 10 || strlen($id) == 13) {
+			$res = array('isbn' => array($id));
+			$this->query = 'bs.isbn="{{isbn}}"';
+		} else {
+			App::abort(404, 'Invalid id format');
+		}
 
-		$res = array('id' => $id);
-		$res = $this->lookupIds($res);
 		return parent::lookup($res);
 
 	}
