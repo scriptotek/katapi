@@ -41,6 +41,19 @@ class DocumentsController extends BaseController {
 			$rec['holdings'][] = $h;
 		}
 
+		$rec['subjects'] = array_map(function($subj) {
+			$term = $subj['term'];
+			if (isset($subj['subdivisions']['topical'])) $term .= ' : ' . $subj['subdivisions']['topical'];
+			if (isset($subj['subdivisions']['form'])) $term .= ' : ' . $subj['subdivisions']['form'];
+			if (isset($subj['subdivisions']['chronological'])) $term .= ' : ' . $subj['subdivisions']['chronological'];
+			if (isset($subj['subdivisions']['geographic'])) $term .= ' : ' . $subj['subdivisions']['geographic'];
+			$o = array(
+				'term' => $term
+			);
+			if (isset($subj['vocabulary'])) $o['vocabulary'] = $subj['vocabulary'];
+			return $o;
+		}, $rec['subjects']);
+
 		return Response::json($rec);
 	}
 
