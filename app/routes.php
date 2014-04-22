@@ -17,8 +17,8 @@ Route::get('/', function()
 });
 
 
-Route::get('{vendor}/search', 'DocumentsController@getSearch');
-Route::get('{vendor}/{id}', 'DocumentsController@getShow');
+Route::get('bibsys/search', 'BibsysController@getSearch');
+Route::get('bibsys/{id}', 'BibsysController@getShow');
 
 //Route::controller('documents', 'DocumentsController');
 //Route::controller('subjects', 'SubjectsController');

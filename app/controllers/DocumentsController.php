@@ -7,17 +7,7 @@ use \Guzzle\Http\Client as HttpClient;
 
 class DocumentsController extends BaseController {
 
-	protected $vendors = array(
-		'bibsys' => array(
-			'url' => 'http://sru.bibsys.no/search/biblioholdings', 
-			'options' => array(
-				'schema' => 'marcxchange',
-				'version' => '1.1',
-				'user-agent' => 'KatApi/0.1',
-			),
-			'preprocess' => 'lookupIds',
-		)
-	);
+	protected $userAgent = 'KatApi/0.1';
 
 	public function getIndex()
 	{
@@ -25,64 +15,11 @@ class DocumentsController extends BaseController {
 		return View::make('hello');
 	}
 
-	private function lookupIds($res) {
+	public function lookup($res) {
 
-		$res['id'] = strtolower($res['id']);
-
-		//$url = 'http://adminwebservices.bibsys.no/objectIdService/getObjectId?id=' . $id;
-		$url = 'http://adminwebservices.bibsys.no/objectIdService/getIds?id=' . $res['id'];
-
-        $http = new HttpClient;
-        $httpRes = $http->get($url)->send();
-        $response = trim($httpRes->getBody(true));
-
-		$ids = array();
-		$keys = array(
-			'objektId' => 'objektid',
-			'dokumentId' => 'dokid',
-			'hefteId' => 'heftid',
-		);
-		foreach (explode("\n", $response) as $line) {
-			list($key, $val) = explode(':', $line);
-			$ids[$keys[$key]] = strtolower(trim($val));
-		}
-
-		$ids['knyttid'] = '';
-		if (!in_array($res['id'], array($ids['dokid'], $ids['objektid']))) {
-			 $ids['knyttid'] = $res['id'];
-		}
-
-		$res['id'] = $ids['objektid'];
-		$res['ids'] = $ids;
-		return $res;
-	}
-
-	public function getShow($vendor, $id)
-	{
-		$id = strtolower(trim($id));
-		$id = filter_var($id, FILTER_VALIDATE_REGEXP, array('options' => array('regexp'=>'([a-z0-9]+)')));
-		if (empty($id)) {
-			App::abort(404, 'Empty or invalid id');
-		}
-		if (!isset($this->vendors[$vendor])) {
-			App::abort(404, 'Vendor not found');
-		}
-
-		$vendor = $this->vendors[$vendor];
-		$res = array('id' => $id);
-
-		if (isset($vendor['preprocess'])) {
-			$res = call_user_func_array(array($this,$vendor['preprocess']), array($res));
-			if (empty($res['id'])) {
-				App::abort(404, 'Record not found');
-			}
-		}
-
-		$sru = new SruClient($vendor['url'], $vendor['options']);
+		$sru = new SruClient($this->baseUrl, $this->sruOptions);
 		$query = 'rec.identifier="' . $res['id'] . '"';
-
-		//die($sru->urlTo($query));
-		$response = $sru->search($query);
+		$response = $sru->search($query, 1, 1);
 
 		if (count($response->records) == 0) {
 			App::abort(404, 'Record not found');
@@ -95,6 +32,8 @@ class DocumentsController extends BaseController {
 		$r = $data->first('metadata/marc:collection/marc:record[@type="Bibliographic"]');
 
 		$rec = array_merge($res, $parser->parse($r));
+		$rec['sru_url'] = $sru->urlTo($query, 1, 1);
+
 		$rec['holdings'] = array();
 
 		foreach ($data->xpath('metadata/marc:collection/marc:record[@type="Holdings"]') as $holding) {
@@ -104,16 +43,5 @@ class DocumentsController extends BaseController {
 
 		return Response::json($rec);
 	}
-
-	public function getSearch()
-	{
-		if (!isset($_GET['cql'])) {
-			App::abort(404, 'No query given.');
-		}
-		$cql = $_GET['cql'];
-		$cql = filter_var($cql, FILTER_SANITIZE_URL);
-		return 'Hello ' . $cql;
-	}
-
 
 }

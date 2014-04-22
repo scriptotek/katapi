@@ -11,10 +11,9 @@
 
 <h2>Examples</h2>
 <?php
-	$example1 = URL::action('DocumentsController@getShow', array('vendor' => 'bibsys', 'id' => '132038137'));
-	$example2 = URL::action('DocumentsController@getShow', array('vendor' => 'bibsys', 'id' => '12k189510'));
-	$example3 = URL::action('DocumentsController@getShow', array('vendor' => 'bibsys', 'id' => '050076NA0'));
-?>
+	$example1 = URL::action('BibsysController@getShow', array('id' => '132038137'));
+	$example2 = URL::action('BibsysController@getShow', array('id' => '12k189510'));
+	$example3 = URL::action('BibsysController@getShow', array('id' => '050076NA0'));
 ?>
 
 <ul>
