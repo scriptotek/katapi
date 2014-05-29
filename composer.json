@@ -1,6 +1,6 @@
 {
-	"name": "danmichaelo/ok",
-	"description": "OpenKat, friendly representation of catalog data from SRU service.",
+	"name": "danmichaelo/katapi",
+	"description": "KatApi, friendly representation of catalog data from SRU service.",
 	"keywords": ["SRU"],
 	"license": "MIT",
 	"require": {
