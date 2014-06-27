@@ -5,16 +5,16 @@
 	"license": "MIT",
 	"require": {
 		"laravel/framework": "4.1.*",
-        "scriptotek/simplemarcparser": "dev-master",
-        "rmccue/requests": "dev-master",
-        "scriptotek/sru-client": "dev-master",
-        "willdurand/negotiation": "1.2.*",
+		"scriptotek/simplemarcparser": "dev-master",
+		"rmccue/requests": "dev-master",
+		"scriptotek/sru-client": "dev-master",
+		"willdurand/negotiation": "1.2.*",
 		"guzzle/guzzle": "3.8.*"
 	},
-    "require-dev": {
-        "way/generators": "2.*",
-        "phpunit/phpunit": "4.0.*"
-    },
+	"require-dev": {
+		"way/generators": "2.*",
+		"phpunit/phpunit": "4.0.*"
+	},
 	"autoload": {
 		"classmap": [
 			"app/commands",
@@ -25,12 +25,12 @@
 			"app/tests/TestCase.php"
 		]
 	},
-    "repositories": [
-        {
-            "type": "vcs",
-            "url":  "https://github.com/scriptotek/php-sru-client.git"
-        }
-    ],
+	"repositories": [
+		{
+			"type": "vcs",
+			"url":  "https://github.com/scriptotek/php-sru-client.git"
+		}
+	],
 	"scripts": {
 		"post-install-cmd": [
 			"php artisan clear-compiled",
