@@ -1,8 +1,8 @@
 <?php
 
 use Scriptotek\Sru\Client as SruClient;
-use Danmichaelo\SimpleMarcParser\BibliographicParser;
-use Danmichaelo\SimpleMarcParser\HoldingsParser;
+use Scriptotek\SimpleMarcParser\BibliographicParser;
+use Scriptotek\SimpleMarcParser\HoldingsParser;
 use \Guzzle\Http\Client as HttpClient;
 
 class DocumentsController extends BaseController {

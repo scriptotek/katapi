@@ -5,7 +5,7 @@
 	"license": "MIT",
 	"require": {
 		"laravel/framework": "4.1.*",
-        "danmichaelo/simplemarcparser": "dev-master",
+        "scriptotek/simplemarcparser": "dev-master",
         "rmccue/requests": "dev-master",
         "scriptotek/sru-client": "dev-master",
         "willdurand/negotiation": "1.2.*",
