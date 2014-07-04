@@ -16,9 +16,27 @@ Route::get('/', function()
 	return View::make('hello');
 });
 
+# /documents/show/:id
+Route::get('documents/show/{id}', 'BibsysController@getShow');
+Route::get('bibsys/{id}', function($id) {
+	return Redirect::action('BibsysController@getShow', $id);
+});
 
-Route::get('bibsys/search', 'BibsysController@getSearch');
-Route::get('bibsys/{id}', 'BibsysController@getShow');
+# /documents/search
+Route::get('documents/search', 'BibsysController@getSearch');
+Route::get('bibsys/search', function() {
+	return Redirect::action('BibsysController@getSearch');
+});
+
+# /covers/show/:id
+Route::get('covers/show/{id}', 'CoversController@getShow');
+//Route::get('covers/select/{id}', 'CoversController@getSelect');
+
+//Route::get('covers/{id}/store', 'CoversController@postStore');
+//Route::get('covers/{id}/remove', 'CoversController@getRemove');
+//Route::get('covers/{id}/list', 'CoversController@getList');
+//Route::get('covers/{id}/set-preferred/{index}', 'CoversController@postSetPreferred');
+
 
 //Route::controller('documents', 'DocumentsController');
 //Route::controller('subjects', 'SubjectsController');
