@@ -43,10 +43,8 @@ class DocumentsController extends BaseController {
 		}
 
 		$holdings = array();
-
 		foreach ($data->xpath('metadata/marc:collection/marc:record[@type="Holdings"]') as $holding) {
-			$h = $parser->parse($holding);
-			$holdings[] = $h;
+			$holdings[] = $parser->parse($holding)->toArray();
 		}
 		$rec->holdings = $holdings;
 
