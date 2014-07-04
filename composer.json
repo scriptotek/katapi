@@ -4,10 +4,10 @@
 	"keywords": ["SRU"],
 	"license": "MIT",
 	"require": {
-		"laravel/framework": "4.1.*",
 		"scriptotek/simplemarcparser": "dev-master",
-		"rmccue/requests": "dev-master",
 		"scriptotek/sru-client": "dev-master",
+		"laravel/framework": "4.2.*",
+		"rmccue/requests": ">=1.6",
 		"willdurand/negotiation": "1.2.*",
 		"guzzle/guzzle": "3.8.*"
 	},
