@@ -46,9 +46,38 @@ Log::useFiles(storage_path().'/logs/laravel.log');
 |
 */
 
+
+function myExceptionHandler(Exception $exception, $code) {
+
+	$negotiator = new \Negotiation\FormatNegotiator();
+	$acceptHeader = $_SERVER['HTTP_ACCEPT'];
+
+	$priorities = array('text/html', 'application/json');
+	$format = $negotiator->getBest($acceptHeader, $priorities);
+
+	if ($format->getValue() == 'text/html') {
+		return Response::view('errors.missing', array(
+			'message' => $exception->getMessage() ?: 'Page not found'
+		), 404);
+	} else if ($format->getValue() == 'application/json') {
+		return Response::json(array(
+			'error' => $exception->getMessage() ?: 'Page not found'
+		), 404);
+	}
+
+}
+
 App::error(function(Exception $exception, $code)
 {
 	Log::error($exception);
+
+	if ($code == '400') {
+		return myExceptionHandler($exception, $code);
+	}
+});
+
+App::missing(function(Exception $exception) {
+	return myExceptionHandler($exception, 404);
 });
 
 /*

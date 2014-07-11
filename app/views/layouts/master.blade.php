@@ -16,11 +16,11 @@
   <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
 
   <!-- Open Sans -->
-  <link href='http://fonts.googleapis.com/css?family=Open+Sans&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+  <link href='http://fonts.googleapis.com/css?family=Open+Sans&amp;subset=latin,latin-ext' rel='stylesheet' type='text/css'>
 
-  <link href="app.css" rel="stylesheet">
+  <link href="{{ URL::to('app.css') }}" rel="stylesheet">
 
-  <script src="app.js"></script>
+  <script src="{{ URL::to('app.js') }}"></script>
 
 </head>
 <body>

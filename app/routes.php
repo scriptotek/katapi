@@ -48,21 +48,3 @@ Route::get('covers/show/{id}', 'CoversController@getShow');
 
 Route::controller('examples', 'ExamplesController');
 
-App::missing(function($exception)
-{
-	$negotiator = new \Negotiation\FormatNegotiator();
-	$acceptHeader = $_SERVER['HTTP_ACCEPT'];
-
-	$priorities = array('text/html', 'application/json');
-	$format = $negotiator->getBest($acceptHeader, $priorities);
-
-	if ($format->getValue() == 'text/html') {
-		return Response::view('errors.missing', array(
-			'message' => $exception->getMessage() ?: 'Page not found'
-		), 404);
-	} else if ($format->getValue() == 'application/json') {
-		return Response::json(array(
-			'error' => $exception->getMessage() ?: 'Page not found'
-		), 404);
-	}
-});
