@@ -11,11 +11,11 @@
 
 <h2>GET /documents/show/:id</h2>
 <?php
-	$example1 = URL::action('BibsysController@getShow', array('id' => '132038137'));
-	$example2 = URL::action('BibsysController@getShow', array('id' => '12k189510'));
-	$example3 = URL::action('BibsysController@getShow', array('id' => '050076NA0'));
-	$example4 = URL::action('BibsysController@getShow', array('id' => '1-107-01395-X'));
-	$example5 = URL::action('BibsysController@getShow', array('id' => '841188564'));
+	$example1 = URL::action('DocumentsController@getShow', array('id' => '132038137'));
+	$example2 = URL::action('DocumentsController@getShow', array('id' => '12k189510'));
+	$example3 = URL::action('DocumentsController@getShow', array('id' => '050076NA0'));
+	$example4 = URL::action('DocumentsController@getShow', array('id' => '1-107-01395-X'));
+	$example5 = URL::action('DocumentsController@getShow', array('id' => '841188564'));
 	$exampleS1 = URL::action('SubjectsController@getShow', array(
 		'vocabulary' => 'noubomn', 'term' => 'Steganografi'
 	));
