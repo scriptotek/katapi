@@ -103,6 +103,7 @@ class HarvestBibsys extends Command {
 			'changed' => 0,
 			'removed' => 0,
 			'unchanged' => 0,
+			'error' => 0
 		);
 
 		$client = new OaiClient($url, array(
@@ -125,16 +126,21 @@ class HarvestBibsys extends Command {
 		$progress = $this->getHelperSet()->get('progress');
 		$progress->start($this->output, $records->numberOfRecords);
 
+		$resumptionToken = '';
 		foreach ($records as $record) {
 			$progress->advance();
 			$status = $this->store($record, $oaiSet);
 			$counts[$status]++;
+			if ($resumptionToken != $records->getResumptionToken()) {
+				$resumptionToken = $records->getResumptionToken();
+				file_put_contents(storage_path('resumption_token'), $resumptionToken); 
+			}
 		}
 		$progress->finish();
 
 		// TODO: Purge any subjects in the database that are not in the RDF...
 
-		$this->output->writeln(sprintf('%d records added, %d records changed, %d records removed, %d records unchanged', $counts['added'], $counts['changed'], $counts['removed'], $counts['unchanged']));
+		$this->output->writeln(sprintf('%d records added, %d records changed, %d records removed, %d errored, %d records unchanged', $counts['added'], $counts['changed'], $counts['removed'], $counts['errored'], $counts['unchanged']));
 
 		return true;
 	}
@@ -152,8 +158,8 @@ class HarvestBibsys extends Command {
 
 		$bibsys_id = $record->data->text('.//marc:record[@type="Bibliographic"]/marc:controlfield[@tag="001"]');
 		if (strlen($bibsys_id) != 9) {
-			$this->output->writeln("<error>Invalid record id: $bibsys_id</error>");
-			return false;
+			$this->output->writeln("<error>[$record->identifier] Invalid record id: $bibsys_id</error>");
+			return 'error';
 		}
 
 		$doc = Document::where('bibsys_id', '=', $bibsys_id)->first();
