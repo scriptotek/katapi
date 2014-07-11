@@ -21,10 +21,12 @@ Route::get('/', function()
 //Route::get('documents/show/{id}', 'BibsysController@getShow');
 
 Route::get('subjects/{vocabulary}/{term}', 'SubjectsController@getShow');
-Route::get('documents/show/{id}', 'DocumentsController@getShow');
-Route::get('bibsys/{id}', function($id) {
-	return Redirect::action('BibsysController@getShow', $id);
-});
+Route::get('documents/show/{id}', 'DocumentsController@getShow')
+	->where(array('id' => '[0-9X-]+'));
+
+// Route::get('bibsys/{id}', function($id) {
+// 	return Redirect::action('BibsysController@getShow', $id);
+// });
 
 # /documents/search
 Route::get('documents/search', 'BibsysController@getSearch');

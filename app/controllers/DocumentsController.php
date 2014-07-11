@@ -23,14 +23,10 @@ class DocumentsController extends BaseController {
 		if (!$doc) {
 			$bs = new BibsysController;
 			return $bs->getShow($id);
-
-			// return Response::json(array(
-			// 	'error' => 'notFound',
-			// ));
 		}
 
 		$doc->served_by = 'local_db';
-		return Response::json($doc);
+		return $this->showDocument($doc);
 	}
 
 	public function lookup($res) {
@@ -70,8 +66,24 @@ class DocumentsController extends BaseController {
 		}
 		$rec->holdings = $holdings;
 		$rec->served_by = 'bibsys_sru';
+		$rec->bibsys_id = $rec->id; // to avoid confusion with MongoDB ID
 
-		return Response::json($rec);
+		return $this->showDocument($rec);
+	}
+
+	public function showDocument($doc)
+	{
+		switch ($this->getRequestFormat()) {
+			case 'json':
+				return Response::json($doc);
+			case 'html':
+				return View::make('documents.show', array(
+					'doc' => $doc
+				));
+			default:
+				App::abort(400, 'Unknown format requested');
+		}
+
 	}
 
 }

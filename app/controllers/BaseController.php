@@ -15,4 +15,15 @@ class BaseController extends Controller {
 		}
 	}
 
+	public function getRequestFormat()
+	{
+		if (Request::has('format')) {
+			return Request::get('format');
+		}
+		foreach(Request::getAcceptableContentTypes() as $type){
+	        $format = Request::getFormat($type);
+	        return $format;
+	    }
+	}
+
 }
