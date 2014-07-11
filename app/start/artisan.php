@@ -11,3 +11,5 @@
 |
 */
 
+Artisan::add(new HarvestBibsys);
+Artisan::add(new HarvestRealfagstermer);

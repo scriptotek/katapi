@@ -6,7 +6,7 @@
 	katapi
 </h1>
 <p>
-	<a href="https://github.com/scriptotek/katapi">Open source</a> library metadata transducer
+	Library metadata transducer. API is <em>not</em> stable. <a href="https://github.com/scriptotek/katapi">More info</a>
 </p>
 
 <h2>GET /documents/show/:id</h2>
@@ -16,6 +16,9 @@
 	$example3 = URL::action('BibsysController@getShow', array('id' => '050076NA0'));
 	$example4 = URL::action('BibsysController@getShow', array('id' => '1-107-01395-X'));
 	$example5 = URL::action('BibsysController@getShow', array('id' => '841188564'));
+	$exampleS1 = URL::action('SubjectsController@getShow', array(
+		'vocabulary' => 'noubomn', 'term' => 'Steganografi'
+	));
 ?>
 
 <p>
@@ -46,6 +49,19 @@
 		Complex journal succeeding entry:<br>
         <a href="{{ $example5 }}">{{ $example5 }}</a>
     </li>
+</ul>
+
+<h2>GET /subjects/:vocabulary/:term</h2>
+<p>
+	Returns a single Subject, specified by a :vocabulary (an LC subject source code) 
+	and :term (an index term).
+	Term usage is embedded in the returned object.
+</p>
+<ul>
+	<li>
+		The term "Steganografi" in the vocabulary "noubomn" (Realfagstermer):<br>
+		<a href="{{ $exampleS1 }}">{{ $exampleS1 }}</a>		
+	</li>
 </ul>
 
 

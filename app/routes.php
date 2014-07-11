@@ -17,7 +17,11 @@ Route::get('/', function()
 });
 
 # /documents/show/:id
-Route::get('documents/show/{id}', 'BibsysController@getShow');
+
+//Route::get('documents/show/{id}', 'BibsysController@getShow');
+
+Route::get('subjects/{vocabulary}/{term}', 'SubjectsController@getShow');
+Route::get('documents/show/{id}', 'DocumentsController@getShow');
 Route::get('bibsys/{id}', function($id) {
 	return Redirect::action('BibsysController@getShow', $id);
 });
@@ -42,6 +46,7 @@ Route::get('covers/show/{id}', 'CoversController@getShow');
 //Route::controller('subjects', 'SubjectsController');
 //Route::controller('covers', 'CoversController');
 
+Route::controller('examples', 'ExamplesController');
 
 App::missing(function($exception)
 {

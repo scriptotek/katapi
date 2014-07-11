@@ -16,13 +16,32 @@ class DocumentsController extends BaseController {
 		return View::make('hello');
 	}
 
+	public function getShow($id)
+	{
+		$rec = array('id' => $id);
+		$doc = Document::where('bibsys_id', '=', $id)->first();
+		if (!$doc) {
+			$bs = new BibsysController;
+			return $bs->getShow($id);
+
+			// return Response::json(array(
+			// 	'error' => 'notFound',
+			// ));
+		}
+
+		$doc->served_by = 'local_db';
+		return Response::json($doc);
+	}
+
 	public function lookup($res) {
 
 		$sru = new SruClient($this->baseUrl, $this->sruOptions);
 		if (isset($res['id'])) {
+			Clockwork::info('Querying for id: ' . $res['id']);
 			$query = str_replace('{{id}}', $res['id'], $this->query);
 		}
 		if (isset($res['isbn']) && count($res['isbn']) > 0) {
+			Clockwork::info('Querying for isbn: ' . $res['isbn'][0]);
 			$query = str_replace('{{isbn}}', $res['isbn'][0], $this->query);
 		}
 		$response = $sru->search($query, 1, 1);
@@ -37,6 +56,9 @@ class DocumentsController extends BaseController {
 		$r = $data->first('metadata/marc:collection/marc:record[@type="Bibliographic"]');
 
 		$rec = $parser->parse($r);
+		$rec->created = $rec->created->toDateTimeString();
+		$rec->modified = $rec->modified->toDateTimeString();
+
 		$rec->source = $sru->urlTo($query, 1, 1);
 		foreach ($res as $key => $value) {
 			$rec->{$key} = $value;
@@ -47,21 +69,8 @@ class DocumentsController extends BaseController {
 			$holdings[] = $parser->parse($holding)->toArray();
 		}
 		$rec->holdings = $holdings;
+		$rec->served_by = 'bibsys_sru';
 
-		if (!is_null($rec->subjects)) {
-			$rec->subjects = array_map(function($subj) {
-				$term = $subj['term'];
-				if (isset($subj['subdivisions']['topical'])) $term .= ' : ' . $subj['subdivisions']['topical'];
-				if (isset($subj['subdivisions']['form'])) $term .= ' : ' . $subj['subdivisions']['form'];
-				if (isset($subj['subdivisions']['chronological'])) $term .= ' : ' . $subj['subdivisions']['chronological'];
-				if (isset($subj['subdivisions']['geographic'])) $term .= ' : ' . $subj['subdivisions']['geographic'];
-				$o = array(
-					'term' => $term
-				);
-				if (isset($subj['vocabulary'])) $o['vocabulary'] = $subj['vocabulary'];
-				return $o;
-			}, $rec->subjects);
-		}
 		return Response::json($rec);
 	}
 
