@@ -1,18 +1,16 @@
 @extends('layouts.master')
 
 @section('content')
-<h1>
-	404
-</h1>
-<p>
+
+<h2>
 @if ($message)
-	{{ $message }}
+	Error {{ $code }} : {{ $message }}
 @else
 	URL has been eaten!
 @endif 
-</p>
+</h2>
 <p>
-	<a href="/">Go back to start?</a>
+	<a href="/">Back to start?</a>
 </p>
 
 @stop
