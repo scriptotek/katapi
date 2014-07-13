@@ -4,7 +4,6 @@ use Illuminate\Console\Command;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
-use Carbon\Carbon;
 use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement;
 use Scriptotek\Oai\Client as OaiClient;
 
@@ -46,13 +45,11 @@ class HarvestBibsys extends Command {
 		// tasks to prevent memory usage from increasing linearly over time
 		DB::connection()->disableQueryLog();
 
-		$url = 'http://oai.bibsys.no/repository';
-		$url = 'http://utvikle-a.bibsys.no/oai/repository';
-		$startDate = Carbon::createFromDate(1960, 01, 01);
-		$untilDate = Carbon::now();
-		$oaiSet = 'urealSamling42';
-		$oaiSet = 'ubo_komplett';
-		//$this->dirName = storage_path('oai_tmp/' . $this->untilDate->toDateString());
+		$resumptionToken = $this->option('resume');
+		$url = $this->option('url');
+		$oaiSet = $this->option('set');
+		$startDate = $this->option('from');
+		$untilDate = $this->option('until');
 
 		$this->info('');
 		$this->info('============================================================');
@@ -60,11 +57,11 @@ class HarvestBibsys extends Command {
 			strftime('%Y-%m-%d %H:%M:%S')
 		));
 		$this->info(sprintf('@ From: %s, until: %s',
-			$startDate->toDateString(), $untilDate->toDateString()
+			$startDate, $untilDate
 		));
 		$this->info('------------------------------------------------------------');
 
-		$this->harvest($url, $startDate, $untilDate, $oaiSet);
+		$this->harvest($url, $startDate, $untilDate, $oaiSet, $resumptionToken);
 
 		// $this->info(sprintf('@ Processed %d records', $recordsProcessed));
 		// $this->info(sprintf('@ %s: Completing OAI harvest',
@@ -93,14 +90,20 @@ class HarvestBibsys extends Command {
 	protected function getOptions()
 	{
 		return array(
-
+			array('url', null, InputArgument::OPTIONAL, 'Repository URL', 'http://utvikle-a.bibsys.no/oai/repository'),
+			array('set', null, InputOption::VALUE_REQUIRED, 'OAI set name', 'ubo_komplett'),
+			array('from', null, InputOption::VALUE_REQUIRED, 'From date (YYYY-MM-DD)'),
+			array('until', null, InputOption::VALUE_REQUIRED, 'Until date (YYYY-MM-DD)'),
+			array('resume', null, InputOption::VALUE_REQUIRED, 'Resumption token'),
 		);
+		// $url = 'http://oai.bibsys.no/repository';
+		// $oaiSet = 'urealSamling42';
 	}
 
 	/**
 	 * Harvest records using the OaiClient
 	 */
-	public function harvest($url, $startDate, $untilDate, $oaiSet)
+	public function harvest($url, $startDate, $untilDate, $oaiSet, $resumptionToken = null)
 	{
 
 		$counts = array(
@@ -116,10 +119,21 @@ class HarvestBibsys extends Command {
 			'user-agent' => 'KatApi/0.1'
 		));
 
+		if (!file_exists(storage_path("harvest"))) {
+			mkdir(storage_path("harvest"));
+		}
+
+		$requestNo = 0;
+		$client->on('request.complete', function($verb, $args) use ($requestNo) {
+			$requestNo++;
+			storage_path("harvest/harvest$requestNo.xml");
+		});
+
 		$records = $client->records(
-			$startDate->toDateString(),
-			$untilDate->toDateString(),
-			$oaiSet
+			$startDate,
+			$untilDate,
+			$oaiSet,
+			$resumptionToken
 		);
 
 		if ($records->error) {
@@ -127,7 +141,6 @@ class HarvestBibsys extends Command {
 			die;
 		}
 
-		$n = 0;
 		$progress = $this->getHelperSet()->get('progress');
 		$progress->start($this->output, $records->numberOfRecords);
 
@@ -138,6 +151,7 @@ class HarvestBibsys extends Command {
 			$counts[$status]++;
 			if ($resumptionToken != $records->getResumptionToken()) {
 				$resumptionToken = $records->getResumptionToken();
+				Log::info('Got resumption token: ' . $resumptionToken);
 				file_put_contents(storage_path('resumption_token'), $resumptionToken); 
 			}
 		}
@@ -163,6 +177,7 @@ class HarvestBibsys extends Command {
 
 		$bibsys_id = $record->data->text('.//marc:record[@type="Bibliographic"]/marc:controlfield[@tag="001"]');
 		if (strlen($bibsys_id) != 9) {
+			Log::error("[$record->identifier] Invalid record id: $bibsys_id");
 			$this->output->writeln("<error>[$record->identifier] Invalid record id: $bibsys_id</error>");
 			return 'error';
 		}
