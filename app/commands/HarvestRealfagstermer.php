@@ -39,6 +39,11 @@ class HarvestRealfagstermer extends Command {
 	 */
 	public function fire()
 	{
+
+		// The query log is kept in memory, so we should disable it for long-running
+		// tasks to prevent memory usage from increasing linearly over time
+		DB::connection()->disableQueryLog();
+
 		$filename = $this->argument('filename');
 
 		$this->info('');

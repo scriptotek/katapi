@@ -41,6 +41,11 @@ class HarvestBibsys extends Command {
 	 */
 	public function fire()
 	{
+
+		// The query log is kept in memory, so we should disable it for long-running
+		// tasks to prevent memory usage from increasing linearly over time
+		DB::connection()->disableQueryLog();
+
 		$url = 'http://oai.bibsys.no/repository';
 		$url = 'http://utvikle-a.bibsys.no/oai/repository';
 		$startDate = Carbon::createFromDate(1960, 01, 01);
