@@ -26,8 +26,12 @@
 <body>
 
   <div class="container">
+    <h1>
+      <a href="{{ URL::to('/') }}">katapi</a>
+    </h1>
     @yield('content')
   </div>
 
 </body> 
 </html>
+

@@ -2,9 +2,6 @@
 
 @section('content')
 
-<h1>
-	katapi
-</h1>
 <p>
 	Library metadata transducer. API is <em>not</em> stable. <a href="https://github.com/scriptotek/katapi">More info</a>
 </p>
