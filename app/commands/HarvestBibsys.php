@@ -119,7 +119,8 @@ class HarvestBibsys extends Command {
 
 		$client = new OaiClient($url, array(
 			'schema' => 'marcxchange',
-			'user-agent' => 'KatApi/0.1'
+			'user-agent' => 'KatApi/0.1',
+			'maxRetries' => 100,
 		));
 
 		if (!file_exists(storage_path("harvest"))) {
@@ -127,6 +128,11 @@ class HarvestBibsys extends Command {
 		}
 
 		$requestNo = 0;
+		$client->on('request.error', function($err) {
+			if (isset($this->progress)) $this->progress->clear();
+			$this->output->writeln("\n<error>" . $err . '</error>');
+			if (isset($this->progress)) $this->progress->display();
+		});
 		$client->on('request.complete', function($verb, $args) use ($requestNo) {
 			$requestNo++;
 			storage_path("harvest/harvest$requestNo.xml");
@@ -140,16 +146,17 @@ class HarvestBibsys extends Command {
 		);
 
 		if ($records->error) {
-			$this->output->writeln('<error>' . $records->errorCode . ' : ' . $records->error . '</error>');
+			$this->progress->clear();
+			$this->output->writeln("\n<error>" . $records->errorCode . ' : ' . $records->error . '</error>');
 			die;
 		}
 
-		$progress = $this->getHelperSet()->get('progress');
-		$progress->start($this->output, $records->numberOfRecords);
+		$this->progress = $this->getHelperSet()->get('progress');
+		$this->progress->start($this->output, $records->numberOfRecords);
 
 		$resumptionToken = '';
 		foreach ($records as $record) {
-			$progress->advance();
+			$this->progress->advance();
 			$status = $this->store($record, $oaiSet);
 			$counts[$status]++;
 			if ($resumptionToken != $records->getResumptionToken()) {
@@ -158,7 +165,7 @@ class HarvestBibsys extends Command {
 				file_put_contents(storage_path('resumption_token'), $resumptionToken); 
 			}
 		}
-		$progress->finish();
+		$this->progress->finish();
 
 		// TODO: Purge any subjects in the database that are not in the RDF...
 
@@ -180,7 +187,9 @@ class HarvestBibsys extends Command {
 		$bibsys_id = $record->data->text('.//marc:record[@type="Bibliographic"]/marc:controlfield[@tag="001"]');
 		if (strlen($bibsys_id) != 9) {
 			Log::error("[$record->identifier] Invalid record id: $bibsys_id");
-			$this->output->writeln("<error>[$record->identifier] Invalid record id: $bibsys_id</error>");
+			$this->progress->clear();
+			$this->output->writeln("\n<error>[$record->identifier] Invalid record id: $bibsys_id</error>");
+			$this->progress->display();
 			return 'error';
 		}
 
@@ -196,7 +205,9 @@ class HarvestBibsys extends Command {
 		}
 		if (!$doc->import($record->data, $this->output)) {
 			Log::error("[$record->identifier] Import failed: Invalid record");
-			$this->output->writeln("<error>[$record->identifier] Import failed: Invalid record, see log for details.</error>");
+			$this->progress->clear();
+			$this->output->writeln("\n<error>[$record->identifier] Import failed: Invalid record, see log for details.</error>");
+			$this->progress->display();
 			return 'error';
 		}
 		if (!isset($doc->sets)) {
