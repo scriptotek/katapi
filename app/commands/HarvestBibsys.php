@@ -45,23 +45,26 @@ class HarvestBibsys extends Command {
 		// tasks to prevent memory usage from increasing linearly over time
 		DB::connection()->disableQueryLog();
 
-		$resumptionToken = $this->option('resume');
-		$url = $this->option('url');
-		$oaiSet = $this->option('set');
-		$startDate = $this->option('from');
-		$untilDate = $this->option('until');
-
 		$this->info('');
 		$this->info('============================================================');
-		$this->info(sprintf('@ %s: Starting OAI harvest',
+		$this->info(sprintf('%s: Starting OAI harvest',
 			strftime('%Y-%m-%d %H:%M:%S')
 		));
-		$this->info(sprintf('@ From: %s, until: %s',
-			$startDate, $untilDate
-		));
+		foreach (array('url', 'set', 'from', 'until', 'resume') as $key) {
+			if (!is_null($this->option($key))) {
+				$this->info(sprintf('- %s: %s', $key, $this->option($key)));
+			}
+		}
+
 		$this->info('------------------------------------------------------------');
 
-		$this->harvest($url, $startDate, $untilDate, $oaiSet, $resumptionToken);
+		$this->harvest(
+			$this->option('url'),
+			$this->option('from'),
+			$this->option('until'),
+			$this->option('set'),
+			$this->option('resume')
+		);
 
 		// $this->info(sprintf('@ Processed %d records', $recordsProcessed));
 		// $this->info(sprintf('@ %s: Completing OAI harvest',
@@ -174,7 +177,6 @@ class HarvestBibsys extends Command {
 		$status = 'unchanged';
 
 		// ex.: oai:bibsys.no:collection:901028711
-
 		$bibsys_id = $record->data->text('.//marc:record[@type="Bibliographic"]/marc:controlfield[@tag="001"]');
 		if (strlen($bibsys_id) != 9) {
 			Log::error("[$record->identifier] Invalid record id: $bibsys_id");
@@ -192,7 +194,11 @@ class HarvestBibsys extends Command {
 		} else {
 			// Log::info(sprintf('[%s] UPDATE document', $bibsys_id));
 		}
-		$doc->import($record->data, $this->output);
+		if (!$doc->import($record->data, $this->output)) {
+			Log::error("[$record->identifier] Import failed: Invalid record");
+			$this->output->writeln("<error>[$record->identifier] Import failed: Invalid record, see log for details.</error>");
+			return 'error';
+		}
 		if (!isset($doc->sets)) {
 			$doc->sets = array();
 		}
