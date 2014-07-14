@@ -6,20 +6,34 @@ class Subject extends Eloquent {
 
 	protected $collection = 'subjects';
 
-    /* Attributes to be added to JSON serialization through accessors */
-    protected $appends = array('documents');
-
 	protected $fillable = array('indexTerm', 'vocabulary');	
-	protected $visible = array('_id', 'identifier', 'created_at', 'updated_at', 'indexTerm', 'vocabulary', 'prefLabels', 'altLabels');
+	protected $visible = array('_id', 'identifier', 'created_at', 'updated_at', 
+		'indexTerm', 'vocabulary', 'prefLabels', 'altLabels');
+
+	/* Authoritative list of vocabulary names */
+	public static $vocabularies = array(
+		'noubomn' => 'Realfagstermer',
+		'humord' => 'Humord',
+		'tekord' => 'Tekord',
+		'lcsh' => 'Library of Congress Subject Headings',
+	);
 
 	public function documents()
     {
         return $this->belongsToMany('Document');
     }
 
-    /* Accessor for the documents attribute */
-	public function getDocumentsAttribute()
+	/**
+	 * Convert the model instance to an array.
+	 * Override in order to present a *simplified* representation of the documents array
+	 * instead of embedding the complete documents
+	 *
+	 * @return array
+	 */
+	public function toArray()
 	{
+		$attributes = $this->attributesToArray();
+
 		$docs = array();
 		foreach ($this->documents()->get() as $doc) {
 			$docs[] = array(
@@ -27,7 +41,12 @@ class Subject extends Eloquent {
 				'uri' =>  URL::action('DocumentsController@getShow', array('id' => $doc->bibsys_id)),
 			); 
 		}
-		return $docs;
-	}
 
+		// Appends docs
+		$res = array_merge($attributes, $this->relationsToArray());
+		$res['documents'] = $docs;
+
+		return $res;
+	}
+   
 }

@@ -18,64 +18,54 @@ class DocumentsController extends BaseController {
 
 	public function getShow($id)
 	{
+		$id = strtolower(trim($id));
+		$id = str_replace('-', '', $id);
+		$id = filter_var($id, FILTER_VALIDATE_REGEXP, array('options' => array('regexp'=>'([a-z0-9]+)')));
+		if (empty($id)) {
+			App::abort(404, 'Empty or invalid id');
+		}
+
 		$rec = array('id' => $id);
-		$doc = Document::where('bibsys_id', '=', $id)->first();
-		if (!$doc) {
-			$bs = new BibsysController;
-			return $bs->getShow($id);
+		$doc = Document::where('bibsys_id', '=', $id)  // objektid
+		               ->orWhere('barcode', '=', $id)  // knyttid
+		               ->first();
+		if ($doc) {
+
+			// Document is fetched from our local DB
+			$doc->served_by = 'local_db';
+
+		} else {
+
+			// Document is fetched from the BIBSYS SRU service
+			try {
+				$bs = new BibsysService;
+				$record = $bs->lookupId($id);
+            } catch (\Guzzle\Http\Exception\CurlException $e) {
+				App::abort(503, 'Sorry, no contact with BIBSYS at the moment');
+            }
+			$doc = new Document();
+			$doc->served_by = 'bibsys_sru';
+
+			// Assign a temporary ID. This is done so we can attach subjects
+			// Without an ID, $doc->subjects() will return all subjects not
+			// attached to any documents!
+			$doc->_id = new MongoId;
+
+			if (!$doc->import($record)) {
+				App::abort(404, 'Failed to parse record. More info in the server log.');
+			}
+
 		}
 
-		$doc->served_by = 'local_db';
-		return $this->showDocument($doc);
-	}
 
-	public function lookup($res) {
+		// Add links to guide the API user
 
-		$sru = new SruClient($this->baseUrl, $this->sruOptions);
-		if (isset($res['id'])) {
-			Clockwork::info('Querying for id: ' . $res['id']);
-			$query = str_replace('{{id}}', $res['id'], $this->query);
-		}
-		if (isset($res['isbn']) && count($res['isbn']) > 0) {
-			Clockwork::info('Querying for isbn: ' . $res['isbn'][0]);
-			$query = str_replace('{{isbn}}', $res['isbn'][0], $this->query);
-		}
-		$response = $sru->search($query, 1, 1);
-
-		if (count($response->records) == 0) {
-			App::abort(404, 'Record not found');
+		if (isset($doc->other_form) && isset($doc->other_form['id'])) {
+			$of = $doc->other_form;
+			$of['uri']= URL::action('DocumentsController@getShow', array($doc->other_form['id']));
+			$doc->other_form = $of;
 		}
 
-		$data = $response->records[0]->data;
-
-		$parser = new Parser;
-		$r = $data->first('metadata/marc:collection/marc:record[@type="Bibliographic"]');
-
-		$rec = $parser->parse($r);
-		$rec->created = $rec->created->toDateTimeString();
-		$rec->modified = $rec->modified->toDateTimeString();
-
-		$rec->source = $sru->urlTo($query, 1, 1);
-		foreach ($res as $key => $value) {
-			$rec->{$key} = $value;
-		}
-
-		$holdings = array();
-		foreach ($data->xpath('metadata/marc:collection/marc:record[@type="Holdings"]') as $holding) {
-			$holdings[] = $parser->parse($holding)->toArray();
-		}
-		$rec->holdings = $holdings;
-		$rec->served_by = 'bibsys_sru';
-
-		$rec->bibsys_id = $rec->id; // to avoid confusion with MongoDB ID
-		unset($rec->id);
-
-		return $this->showDocument($rec);
-	}
-
-	public function showDocument($doc)
-	{
-		// Add links
 		$links = array(
 			array(
 				'rel' => 'self',
@@ -83,12 +73,6 @@ class DocumentsController extends BaseController {
 			)
 		);
 		$doc->links = $links;
-
-		if (isset($doc->other_form) && isset($doc->other_form['id'])) {
-			$of = $doc->other_form;
-			$of['uri']= URL::action('DocumentsController@getShow', array($doc->other_form['id']));
-			$doc->other_form = $of;
-		}
 
 
 		switch ($this->getRequestFormat()) {
@@ -102,14 +86,33 @@ class DocumentsController extends BaseController {
 				// 		)
 				// 	)
 				// );
-				return Response::json($doc);
+				$res = $doc->toArray();
+				return Response::json($res);
+
 			case 'html':
 				return View::make('documents.show', array(
 					'doc' => $doc
 				));
+
 			default:
 				App::abort(400, 'Unknown format requested');
 		}
+
+	}
+
+	public function getSearch()
+	{
+		// TODO
+		if (!isset($_GET['cql'])) {
+			App::abort(404, 'No query given.');
+		}
+		$cql = $_GET['cql'];
+		$cql = filter_var($cql, FILTER_SANITIZE_URL);
+
+		$bs = new BibsysService;
+		$results = $bs->search($cql);
+
+		App::abort(400, 'Not implemented yet');
 
 	}
 
