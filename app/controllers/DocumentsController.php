@@ -66,15 +66,42 @@ class DocumentsController extends BaseController {
 		}
 		$rec->holdings = $holdings;
 		$rec->served_by = 'bibsys_sru';
+
 		$rec->bibsys_id = $rec->id; // to avoid confusion with MongoDB ID
+		unset($rec->id);
 
 		return $this->showDocument($rec);
 	}
 
 	public function showDocument($doc)
 	{
+		// Add links
+		$links = array(
+			array(
+				'rel' => 'self',
+				'uri' => URL::current()
+			)
+		);
+		$doc->links = $links;
+
+		if (isset($doc->other_form) && isset($doc->other_form['id'])) {
+			$of = $doc->other_form;
+			$of['uri']= URL::action('DocumentsController@getShow', array($doc->other_form['id']));
+			$doc->other_form = $of;
+		}
+
+
 		switch ($this->getRequestFormat()) {
 			case 'json':
+				// JSON-LD...
+				// $doc->{"@context"} = array(
+				// 	"other_form" => array(
+				// 		'uri' => array(
+				// 		     "@id" => "http://katapi.biblionaut.net/docs#Document",
+				// 		     "@type" => "@id",
+				// 		)
+				// 	)
+				// );
 				return Response::json($doc);
 			case 'html':
 				return View::make('documents.show', array(

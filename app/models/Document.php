@@ -9,7 +9,7 @@ class Document extends Eloquent {
 	protected $collection = 'documents';
 
 	protected $appends = array('subjects');
-	protected $hidden = array('subject_ids', 'created_at', 'modified_at');
+	protected $hidden = array('_id', 'subject_ids', 'created_at', 'modified_at');
 	protected $dates = array('record_created', 'record_modified');
 
 	public function getSubjectsAttribute()
@@ -25,6 +25,17 @@ class Document extends Eloquent {
 			$subjects[] = $s;
 		}
 		return $subjects;
+	}
+
+    /**
+     * Custom accessor for the model's id.
+     *
+     * @return string
+     */
+    public function getIdAttribute($value)
+    {
+        if ($value) return (string) $value;
+		return $this->bibsys_id;
 	}
 
 	public function import(QuiteSimpleXmlElement $data, Symfony\Component\Console\Output\Output $output)

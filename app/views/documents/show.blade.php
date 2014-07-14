@@ -12,18 +12,68 @@ View MARC21
 <a href="http://sru.bibsys.no/search/biblioholdings?operation=searchRetrieve&amp;version=1.1&amp;startRecord=1&amp;maximumRecords=10&amp;recordSchema=marcxchange&amp;query=bs.objektid%3D951909568">from SRU</a>
 <a href="http://oai.bibsys.no/oai/repository?verb=GetRecord&amp;metadataPrefix=marcxchange&amp;identifier=oai:bibsys.no:biblio:951909568">from OAI</a>
 
+@if ($doc->other_form)
+	Finnes også som <a href="{{ $doc->other_form['uri'] }}">
+		{{ $doc->electronic ? 'trykt utgave' : 'elektronisk utgave' }}
+	</a>
+@endif
+
+<table class="table">
+	<tr>
+		<td>
+			Material:
+		</td>
+		<td>
+			{{$doc->material}}
+		</td>
+	</tr>
+	<tr>
+		<td>
+			Electronic:
+		</td>
+		<td>
+			{{$doc->electronic ? 'Yes' : 'No'}}
+		</td>
+	</tr>
+	<tr>
+		<td>
+			ISBNs:
+		</td>
+		<td>
+			<ul>
+				@foreach ($doc->isbns as $key => $val)
+				<li>
+					{{ $val }}
+				</li>
+				@endforeach
+			</ul>
+		</td>
+	</tr>
+</table>
 
 <hr>
 Subjects:
 <ul>
 	@foreach ($doc->subjects as $subj)
 	<li>
-		{{ isset($subj['term']) ? $subj['term'] : 'n/a'}}	
+		{{ isset($subj['term']) ? $subj['term'] : 'n/a'}}
 		{{ isset($subj['vocabulary']) ? '<span style="color:#888;">(' . $subj['vocabulary'] . ')</span>' : ''}}
 	</li>
 	@endforeach
 </ul>
 
+Classifications:
+<ul>
+	@foreach ($doc->classifications as $class)
+	<li>
+		{{ isset($class['number']) ? $class['number'] : 'n/a'}}
+		{{ isset($class['system']) ? '<span style="color:#888;">(' . $class['system'] .
+			( isset($class['edition']) ? ' ed. ' . $class['edition'] : '') .
+			( isset($class['assigning_agency']) ? ' assigned by ' . $class['assigning_agency'] : '') .
+		 ')</span>' : ''}}
+	</li>
+	@endforeach
+</ul>
 <hr>
 
 <?php
