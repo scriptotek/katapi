@@ -22,7 +22,7 @@ Route::get('/', function()
 
 Route::get('subjects/{vocabulary}/{term}', 'SubjectsController@getShow');
 Route::get('documents/show/{id}', 'DocumentsController@getShow')
-	->where(array('id' => '[0-9X-]+'));
+	->where(array('id' => '[0-9a-zA-Z-]+'));
 
 // Route::get('bibsys/{id}', function($id) {
 // 	return Redirect::action('BibsysController@getShow', $id);

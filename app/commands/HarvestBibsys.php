@@ -45,23 +45,26 @@ class HarvestBibsys extends Command {
 		// tasks to prevent memory usage from increasing linearly over time
 		DB::connection()->disableQueryLog();
 
-		$resumptionToken = $this->option('resume');
-		$url = $this->option('url');
-		$oaiSet = $this->option('set');
-		$startDate = $this->option('from');
-		$untilDate = $this->option('until');
-
 		$this->info('');
 		$this->info('============================================================');
-		$this->info(sprintf('@ %s: Starting OAI harvest',
+		$this->info(sprintf('%s: Starting OAI harvest',
 			strftime('%Y-%m-%d %H:%M:%S')
 		));
-		$this->info(sprintf('@ From: %s, until: %s',
-			$startDate, $untilDate
-		));
+		foreach (array('url', 'set', 'from', 'until', 'resume') as $key) {
+			if (!is_null($this->option($key))) {
+				$this->info(sprintf('- %s: %s', $key, $this->option($key)));
+			}
+		}
+
 		$this->info('------------------------------------------------------------');
 
-		$this->harvest($url, $startDate, $untilDate, $oaiSet, $resumptionToken);
+		$this->harvest(
+			$this->option('url'),
+			$this->option('from'),
+			$this->option('until'),
+			$this->option('set'),
+			$this->option('resume')
+		);
 
 		// $this->info(sprintf('@ Processed %d records', $recordsProcessed));
 		// $this->info(sprintf('@ %s: Completing OAI harvest',
@@ -116,7 +119,8 @@ class HarvestBibsys extends Command {
 
 		$client = new OaiClient($url, array(
 			'schema' => 'marcxchange',
-			'user-agent' => 'KatApi/0.1'
+			'user-agent' => 'KatApi/0.1',
+			'maxRetries' => 100,
 		));
 
 		if (!file_exists(storage_path("harvest"))) {
@@ -124,6 +128,11 @@ class HarvestBibsys extends Command {
 		}
 
 		$requestNo = 0;
+		$client->on('request.error', function($err) {
+			if (isset($this->progress)) $this->progress->clear();
+			$this->output->writeln("\n<error>" . $err . '</error>');
+			if (isset($this->progress)) $this->progress->display();
+		});
 		$client->on('request.complete', function($verb, $args) use ($requestNo) {
 			$requestNo++;
 			storage_path("harvest/harvest$requestNo.xml");
@@ -137,16 +146,17 @@ class HarvestBibsys extends Command {
 		);
 
 		if ($records->error) {
-			$this->output->writeln('<error>' . $records->errorCode . ' : ' . $records->error . '</error>');
+			$this->progress->clear();
+			$this->output->writeln("\n<error>" . $records->errorCode . ' : ' . $records->error . '</error>');
 			die;
 		}
 
-		$progress = $this->getHelperSet()->get('progress');
-		$progress->start($this->output, $records->numberOfRecords);
+		$this->progress = $this->getHelperSet()->get('progress');
+		$this->progress->start($this->output, $records->numberOfRecords);
 
 		$resumptionToken = '';
 		foreach ($records as $record) {
-			$progress->advance();
+			$this->progress->advance();
 			$status = $this->store($record, $oaiSet);
 			$counts[$status]++;
 			if ($resumptionToken != $records->getResumptionToken()) {
@@ -155,7 +165,7 @@ class HarvestBibsys extends Command {
 				file_put_contents(storage_path('resumption_token'), $resumptionToken); 
 			}
 		}
-		$progress->finish();
+		$this->progress->finish();
 
 		// TODO: Purge any subjects in the database that are not in the RDF...
 
@@ -174,11 +184,12 @@ class HarvestBibsys extends Command {
 		$status = 'unchanged';
 
 		// ex.: oai:bibsys.no:collection:901028711
-
 		$bibsys_id = $record->data->text('.//marc:record[@type="Bibliographic"]/marc:controlfield[@tag="001"]');
 		if (strlen($bibsys_id) != 9) {
 			Log::error("[$record->identifier] Invalid record id: $bibsys_id");
-			$this->output->writeln("<error>[$record->identifier] Invalid record id: $bibsys_id</error>");
+			$this->progress->clear();
+			$this->output->writeln("\n<error>[$record->identifier] Invalid record id: $bibsys_id</error>");
+			$this->progress->display();
 			return 'error';
 		}
 
@@ -192,7 +203,13 @@ class HarvestBibsys extends Command {
 		} else {
 			// Log::info(sprintf('[%s] UPDATE document', $bibsys_id));
 		}
-		$doc->import($record->data, $this->output);
+		if (!$doc->import($record->data, $this->output)) {
+			Log::error("[$record->identifier] Import failed: Invalid record");
+			$this->progress->clear();
+			$this->output->writeln("\n<error>[$record->identifier] Import failed: Invalid record, see log for details.</error>");
+			$this->progress->display();
+			return 'error';
+		}
 		if (!isset($doc->sets)) {
 			$doc->sets = array();
 		}

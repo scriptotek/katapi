@@ -3,6 +3,7 @@
 use Jenssegers\Mongodb\Model as Eloquent;
 use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement;
 use Scriptotek\SimpleMarcParser\Parser;
+use Scriptotek\SimpleMarcParser\ParserException;
 
 class Document extends Eloquent {
 
@@ -27,17 +28,13 @@ class Document extends Eloquent {
 		return $subjects;
 	}
 
-    /**
-     * Custom accessor for the model's id.
-     *
-     * @return string
-     */
-    public function getIdAttribute($value)
-    {
-        if ($value) return (string) $value;
-		return $this->bibsys_id;
-	}
-
+	/**
+	 * Import a single record
+	 *
+	 * @param QuiteSimpleXmlElement $data
+	 * @param Symfony\Component\Console\Output\Output $output
+	 * @return boolean
+	 */
 	public function import(QuiteSimpleXmlElement $data, Symfony\Component\Console\Output\Output $output)
 	{
 		$parser = new Parser;
@@ -46,15 +43,21 @@ class Document extends Eloquent {
 
 		foreach ($data->xpath('.//marc:record') as $rec) {
 
-			$parsed = $parser->parse($rec);
+			try {
+				$parsed = $parser->parse($rec);
+			} catch (ParserException $e) {
+				$err = sprintf('Record import failed: %s', $e->getMessage());
+				Log::error($err);
+				return false;
+			}
 
 			if ($parsed instanceof Scriptotek\SimpleMarcParser\BibliographicRecord) {
 
 				if ($this->bibsys_id != $parsed->id) {
-					$err = sprintf('ID %s does not match %s', $parsed->id, $this->bibsys_id);
+					$err = sprintf('Record import failed: ID %s does not match %s', $parsed->id, $this->bibsys_id);
 					Log::error($err);
 					$output->writeln("<error>$err</error>");
-					return;
+					return false;
 				}
 
 				foreach ($parsed->toArray() as $key => $val) {
@@ -157,6 +160,7 @@ class Document extends Eloquent {
 		}
 
 		$this->holdings = $holdings;
+		return true;
 	}
 
 	public function subjects()
