@@ -20,7 +20,7 @@ View MARC21
 
 <table class="table">
 	<tr>
-		<td>
+		<td style="width:25%;">
 			Material:
 		</td>
 		<td>
@@ -56,8 +56,13 @@ Subjects:
 <ul>
 	@foreach ($doc->subjects as $subj)
 	<li>
-		{{ isset($subj['term']) ? $subj['term'] : 'n/a'}}
-		{{ isset($subj['vocabulary']) ? '<span style="color:#888;">(' . $subj['vocabulary'] . ')</span>' : ''}}
+		@if (isset($subj['uri']))
+		 <a href="{{$subj['uri']}}">{{ isset($subj['indexTerm']) ? $subj['indexTerm'] : 'n/a'}}</a>
+		@else
+		 {{ isset($subj['indexTerm']) ? $subj['indexTerm'] : 'n/a'}}
+		@endif
+		{{ isset($subj['vocabulary']) 
+			? '<span style="color:#888; font-size:80%; font-style:italic; padding-left:.3em;display:inline-block;">(' . array_get(Subject::$vocabularies, $subj['vocabulary'], $subj['vocabulary']) . ')</span>' : ''}}
 	</li>
 	@endforeach
 </ul>
@@ -108,5 +113,11 @@ function arrayToTable($doc, $keys = null)
 
 {{-- arrayToTable($doc, array_keys($doc->getAttributes())) --}}
 
+
+<hr>
+<p style="font-size: 10px">
+	{{$doc->served_by == 'local_db' ? 'Record served from local database updated [add date here]'
+	 : 'Record not found in local DB, served directly from BIBSYS SRU service'}}
+</p>
 
 @stop
