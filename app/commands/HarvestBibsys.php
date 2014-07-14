@@ -114,7 +114,7 @@ class HarvestBibsys extends Command {
 			'changed' => 0,
 			'removed' => 0,
 			'unchanged' => 0,
-			'error' => 0
+			'errored' => 0
 		);
 
 		$client = new OaiClient($url, array(
@@ -133,9 +133,10 @@ class HarvestBibsys extends Command {
 			$this->output->writeln("\n<error>" . $err . '</error>');
 			if (isset($this->progress)) $this->progress->display();
 		});
-		$client->on('request.complete', function($verb, $args) use ($requestNo) {
+		$client->on('request.complete', function($verb, $args, $body) use ($requestNo) {
 			$requestNo++;
-			storage_path("harvest/harvest$requestNo.xml");
+			$fname = storage_path("harvest/harvest$requestNo.xml");
+			file_put_contents($fname, $body);
 		});
 
 		$records = $client->records(
@@ -190,7 +191,7 @@ class HarvestBibsys extends Command {
 			$this->progress->clear();
 			$this->output->writeln("\n<error>[$record->identifier] Invalid record id: $bibsys_id</error>");
 			$this->progress->display();
-			return 'error';
+			return 'errored';
 		}
 
 		$doc = Document::where('bibsys_id', '=', $bibsys_id)->first();
@@ -208,7 +209,7 @@ class HarvestBibsys extends Command {
 			$this->progress->clear();
 			$this->output->writeln("\n<error>[$record->identifier] Import failed: Invalid record, see log for details.</error>");
 			$this->progress->display();
-			return 'error';
+			return 'errored';
 		}
 		if (!isset($doc->sets)) {
 			$doc->sets = array();
@@ -244,8 +245,10 @@ class HarvestBibsys extends Command {
 
 		}
 		if (!$doc->save()) {  // No action done if record not dirty
-			$this->output->writeln("<error>Document $id could not be saved!</error>");
-			die;
+			$err = "[$record->identifier] Document $id could not be saved!";
+			Log::error($err);
+			$this->output->writeln("<error>$err</error>");
+			return 'errored';
 		}
 		return $status;
 	}

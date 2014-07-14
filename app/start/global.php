@@ -73,9 +73,7 @@ App::error(function(Exception $exception, $code)
 {
 	Log::error($exception);
 
-	if ($code == '400') {
-		return myExceptionHandler($exception, $code);
-	}
+	return myExceptionHandler($exception, $code);
 });
 
 App::missing(function(Exception $exception) {
