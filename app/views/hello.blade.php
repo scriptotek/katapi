@@ -5,6 +5,10 @@
 <p>
 	Library metadata transducer. API is <em>not</em> stable. <a href="https://github.com/scriptotek/katapi">More info</a>
 </p>
+<p>
+	Use <tt>Accept: application/json</tt> (or add <tt>?format=json</tt>) to get the JSON representation of a resource.
+	More formats might be available in the future. HTML representations are quite limited currently.
+</p>
 
 <h2>GET /documents/show/:id</h2>
 <?php

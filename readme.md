@@ -1,11 +1,15 @@
 katapi
 
-Presenting library data from SRU services in friendly ways.
+API that exposes friendly representations (currently JSON and partly HTML)
+of MARC21-encoded resources. MARC21 data is retrieved from a OAI-PMH repository
+and stored in a local MongoDB store, or retrieved directly from SRU service
+(currently hardcoded to use the BIBSYS SRU service).
 
-Try it at [katapi.biblionaut.net](//katapi.biblionaut.net/)
+Harvesting OAI-PMH data:
 
-Work in progress
+```bash
+php artisan harvest:bibsys --url http://oai.bibsys.no/repository \
+  --set urealSamling42 --from=2014-01-01 --until=2014-02-01
+```
 
-- Currently using Laravel4, which is a bit overkill, playing with Phalcon could be fun
-- Currently JSON-only, should add more representations and content negotiation 
-- Would be interesting to include or link to data from other sources
+Work in progress. Running at [katapi.biblionaut.net](//katapi.biblionaut.net/)
