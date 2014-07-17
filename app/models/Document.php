@@ -15,6 +15,9 @@ class Document extends Eloquent {
 
 	public function getHoldingsAttribute($value)
 	{
+		if (is_null($value)) {
+			return null;
+		}
 		foreach ($value as $key => $val) {
 			if (isset($val['created'])) {
 				$value[$key]['created'] = $this->asDateTime($val['created']);
@@ -109,23 +112,13 @@ class Document extends Eloquent {
 
 		foreach ($data->xpath('.//marc:record') as $rec) {
 
-			try {
-				$parsed = $parser->parse($rec);
-			} catch (ParserException $e) {
-				$err = sprintf('Record import failed: %s', $e->getMessage());
-				Log::error($err);
-				return false;
-			}
+			$parsed = $parser->parse($rec);
 
 			if ($parsed instanceof Scriptotek\SimpleMarcParser\BibliographicRecord) {
 
 				if (isset($this->bibsys_id) && $this->bibsys_id != $parsed->id) {
 					$err = sprintf('Record import failed: ID %s does not match %s', $parsed->id, $this->bibsys_id);
-					Log::error($err);
-					if (!is_null($output)) {
-						$output->writeln("<error>$err</error>");
-					}
-					return false;
+					throw new Exeption($err);
 				}
 				$this->bibsys_id = $parsed->id;
 
@@ -227,12 +220,19 @@ class Document extends Eloquent {
 
 			if ($parsed instanceof Scriptotek\SimpleMarcParser\HoldingsRecord) {
 
-				$holdings[] = $parsed->toArray();
+				$holding = $parsed->toArray();
+
+				// Ignore creation date of record, which is set to the current date by Bibsys
+				unset($holding['created']); 
+
+				$holdings[] = $holding;
+
 			}
 		}
 
-		$this->holdings = $holdings;
-		return true;
+		if ($this->holdings != $holdings) {  // Weak comparison
+			$this->holdings = $holdings;
+		}
 	}
 
 	public function subjects()

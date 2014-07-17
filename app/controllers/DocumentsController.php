@@ -51,8 +51,11 @@ class DocumentsController extends BaseController {
 			// attached to any documents!
 			$doc->_id = new MongoId;
 
-			if (!$doc->import($record)) {
-				App::abort(404, 'Failed to parse record. More info in the server log.');
+			try {
+				$doc->import($record);
+			} catch (Exception $e) {
+				Log::error("[$record->identifier] Failed to parse record. Exception '" . $e->getMessage() . "' in: " . $e->getFile() . ":" . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString());
+				App::abort(503, 'Failed to parse record. More info in the server log.');
 			}
 
 		}

@@ -204,8 +204,11 @@ class HarvestBibsys extends Command {
 		} else {
 			// Log::info(sprintf('[%s] UPDATE document', $bibsys_id));
 		}
-		if (!$doc->import($record->data, $this->output)) {
-			Log::error("[$record->identifier] Import failed: Invalid record");
+		try {
+			$doc->import($record->data, $this->output);
+		} catch (Exception $e) {
+			Log::error("[$record->identifier] Import failed: Invalid record. Exception '" . $e->getMessage() . "' in: " . $e->getFile() . ":" . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString());
+			   //kk var_export($e->getTrace(), true) );
 			$this->progress->clear();
 			$this->output->writeln("\n<error>[$record->identifier] Import failed: Invalid record, see log for details.</error>");
 			$this->progress->display();
@@ -223,25 +226,21 @@ class HarvestBibsys extends Command {
 		if ($status == 'unchanged' && $doc->isDirty()) {
 			$status = 'changed';
 
-			// foreach ($doc->getAttributes() as $key => $val) {
-			// 	if ($doc->isDirty($key)) {
-			// 		$original = $doc->getOriginal($key);
+			$msg = sprintf("[%s] UPDATE document\n", $bibsys_id);
+			foreach ($doc->getAttributes() as $key => $val) {
+				 if ($doc->isDirty($key)) {
+					 $original = $doc->getOriginal($key);
 
-			// 		if ($original) {
-			// 			$current = $val;
-			// 			print "-------------------------------------------\n";
-			// 			print "Key: $key\n";
-			// 			// print get_class($original) . "\n";
-			// 			// print get_class($current) . "\n";
-			// 			// print 'MongoDates equal: ' . (($original == $current) ? 'true' : 'false') . "\n";
-			// 			// print 'Seconds equal: ' . (($original->sec == $current->sec) ? 'true' : 'false') . "\n";
-			// 			// print 'MSecs equal: ' . (($original->usec == $current->usec) ? 'true' : 'false') . "\n";
-			// 			var_dump($original);
-			// 			var_dump($current);
-			// 			print "-------------------------------------------\n";
-			// 		}
-			// 	}
-			// }
+					 if ($original) {
+						 $current = $val;
+						 $msg .= "Key: $key\n";
+						 $msg .= "Old: " . json_encode($original) . "\n";
+						 $msg .= "New: " . json_encode($current) . "\n";
+						 $msg .= "-------------------------------------------\n";
+					 }
+				 }
+			 }
+			 Log::info($msg);
 
 		}
 		if (!$doc->save()) {  // No action done if record not dirty
