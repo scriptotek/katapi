@@ -18,3 +18,16 @@ h1 {
 h2 {
 	font-size: 1.4em;
 }
+
+.iconlist {
+  margin: 0 0 0 0;
+  padding: 0;
+  list-style: none;
+}
+.iconlist li {
+  margin: .2em 0 0 0;
+  padding: 0 0 0 28px;
+  background-repeat: no-repeat;
+  background-position: 6px 2px;
+  background-size: 16px 16px;
+}

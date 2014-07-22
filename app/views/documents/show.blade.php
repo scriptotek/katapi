@@ -81,6 +81,43 @@ Classifications:
 </ul>
 <hr>
 
+<div class="panel panel-default">
+  <!-- Default panel contents -->
+  <div class="panel-heading">Copies</div>
+
+  <!-- List group -->
+  <ul class="list-group">
+
+	@foreach ($doc->holdings as $holding)
+	<li class="list-group-item">
+		<span class="fa {{ $holding['circulation_status'] == 'Available' ? 'fa-check-circle text-success' : 'fa-times-circle text-warning' }}"></span>
+
+		{{ $holding['location'] }} –
+		{{ $holding['shelvinglocation'] }}
+		{{ isset($holding['callcode']) ? '– ' . $holding['callcode'] : '' }} :
+		{{
+			$holding['circulation_status']
+		}}{{
+			isset($holding['use_restrictions']) ? ', ' . $holding['use_restrictions'] : ''
+		}}
+		<br>ID: {{ $holding['id'] }}{{
+			isset($holding['acquired']) ? ', acquired: ' . $holding['acquired']->toDateString() : ''
+		}}
+		@foreach ($holding['public_notes'] as $note)
+		   <br>Note: {{ $note }}
+		@endforeach
+		@foreach ($holding['fulltext'] as $fulltext)
+			<br>
+			<a href="{{ $fulltext['url'] }}">
+			Fulltext from {{ $fulltext['provider'] }}
+			</a>
+		@endforeach
+	</li>
+	@endforeach
+  </ul>
+</div>
+
+
 <?php
 function arrayToTable($doc, $keys = null)
 {
