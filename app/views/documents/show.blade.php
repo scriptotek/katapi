@@ -9,8 +9,8 @@
 
 Objektid: {{ $doc->bibsys_id }}.
 View MARC21
-<a href="http://sru.bibsys.no/search/biblioholdings?operation=searchRetrieve&amp;version=1.1&amp;startRecord=1&amp;maximumRecords=10&amp;recordSchema=marcxchange&amp;query=bs.objektid%3D951909568">from SRU</a>
-<a href="http://oai.bibsys.no/oai/repository?verb=GetRecord&amp;metadataPrefix=marcxchange&amp;identifier=oai:bibsys.no:biblio:951909568">from OAI</a>
+<a href="http://sru.bibsys.no/search/biblioholdings?operation=searchRetrieve&amp;version=1.1&amp;startRecord=1&amp;maximumRecords=10&amp;recordSchema=marcxchange&amp;query=bs.objektid%3D{{ $doc->bibsys_id }}">from SRU</a>
+<a href="http://oai.bibsys.no/oai/repository?verb=GetRecord&amp;metadataPrefix=marcxchange&amp;identifier=oai:bibsys.no:biblio:{{ $doc->bibsys_id }}">from OAI</a>
 
 @if ($doc->other_form)
 	Finnes også som <a href="{{ $doc->other_form['uri'] }}">
