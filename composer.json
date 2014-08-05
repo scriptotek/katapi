@@ -12,7 +12,8 @@
 		"willdurand/negotiation": "1.2.*",
 		"guzzle/guzzle": "3.8.*",
 		"jenssegers/mongodb": "~1.4",
-		"easyrdf/easyrdf": "dev-master"
+		"easyrdf/easyrdf": "dev-master",
+		"barryvdh/laravel-cors": "0.2.x"
 	},
 	"require-dev": {
 		"way/generators": "2.*",
