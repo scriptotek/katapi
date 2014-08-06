@@ -10,12 +10,16 @@ class Subject extends Eloquent {
 	protected $visible = array('_id', 'identifier', 'created_at', 'updated_at', 
 		'indexTerm', 'vocabulary', 'prefLabels', 'altLabels');
 
-	/* Authoritative list of vocabulary names */
+	/**
+	 * Authoritative list of vocabulary names
+	 * Ref: http://www.loc.gov/standards/sourcelist/subject.html
+	 */
 	public static $vocabularies = array(
 		'noubomn' => 'Realfagstermer',
 		'humord' => 'Humord',
 		'tekord' => 'Tekord',
 		'lcsh' => 'Library of Congress Subject Headings',
+		'psychit' => 'APA Thesaurus of psychological index terms',
 	);
 
 	public function documents()

@@ -27,6 +27,7 @@
 
   <div class="container">
     <h1>
+      <i class="fa fa-cogs" style="color: #ddd;"></i>
       <a href="{{ URL::to('/') }}">katapi</a>
     </h1>
     @yield('content')

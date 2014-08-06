@@ -9,8 +9,8 @@ class Document extends Eloquent {
 
 	protected $collection = 'documents';
 
-	protected $appends = array('subjects');
-	protected $hidden = array('_id', 'subject_ids', 'created_at', 'modified_at');
+	protected $appends = array('subjects', 'classes');
+	protected $hidden = array('_id', 'subject_ids', 'created_at', 'modified_at', 'classifications');
 	protected $dates = array('record_created', 'record_modified');
 
 	public function getHoldingsAttribute($value)
@@ -90,11 +90,29 @@ class Document extends Eloquent {
 		}
 
 		// Sort subject headings by vocabulary
-		usort($subjects, function($a, $b) {			
+		usort($subjects, function($a, $b) {
 		    return strcmp(array_get($a, 'vocabulary', ''), array_get($b, 'vocabulary', ''));
 		});
 
 		return $subjects;
+	}
+
+	/* Accessor for the classifications attribute */
+	public function getClassesAttribute()
+	{
+		$classes = array();
+		foreach ($this->classifications as $i) {
+			$s = $i;
+			$s['uri'] = URL::action('ClassController@getShow', array('system' => $i['system'], 'number' => $i['number']));
+			$classes[] = $s;
+		}
+
+		// Sort classes by system
+		usort($classes, function($a, $b) {			
+		    return strcmp(array_get($a, 'system', ''), array_get($b, 'system', ''));
+		});
+
+		return $classes;
 	}
 
 	/**
