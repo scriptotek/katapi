@@ -10,7 +10,7 @@
 		"laravel/framework": "4.2.*",
 		"rmccue/requests": ">=1.6",
 		"willdurand/negotiation": "1.2.*",
-		"guzzle/guzzle": "3.8.*",
+		"guzzle/guzzle": "~3.8.0",
 		"jenssegers/mongodb": "~1.4",
 		"easyrdf/easyrdf": "dev-master",
 		"barryvdh/laravel-cors": "0.2.x"
