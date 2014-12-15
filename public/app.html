@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="katapi">
+<head>
+  <meta charset="utf-8" />
+  <title>KatAPI</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" >
+
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+
+  <!-- Optional theme -->
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+  <!-- Font Awesome -->
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+
+  <!-- Open Sans -->
+  <link href='http://fonts.googleapis.com/css?family=Open+Sans&amp;subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+  <link href="/app.css" rel="stylesheet">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular-route.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular-resource.min.js"></script>
+  <link rel="stylesheet" href="http://css-spinners.com/css/spinner/timer.css" type="text/css">
+
+  <script src="/app/services/api.js"></script>
+  <script src="/app/services/hyphenateISBN.js"></script>
+  <script src="/app/controllers/welcome.js"></script>
+  <script src="/app/controllers/documents.js"></script>
+  <script src="/app/main.js"></script>
+
+</head>
+<body ng-controller="AppCtrl" ng-cloak>
+
+  <div class="container">
+
+    <div class="spinner" ng-show="busy !== false">
+      <div class="bounce1"></div>
+      <div class="bounce2"></div>
+      <div class="bounce3"></div>
+    </div>
+
+    <div class="inner" ng-class="{busy: busy}">
+
+      <h1>
+        <i class="fa fa-cogs" style="color: #ddd;"></i>
+        <a href="/">katapi</a>
+      </h1>
+    
+      <div ng-view></div>
+
+    </div>
+  </div>
+
+</body> 
+</html>
+

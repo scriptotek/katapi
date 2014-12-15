@@ -1,0 +1,13 @@
+
+<div ng-show="!volumes.length">
+	<i class="fa fa-cog fa-spin"></i> Fetching volumes</div>	
+</div>
+<ul>
+	<li ng-repeat="volume in volumes">
+		<a href="{{ volume.bibsys_id }}">{{ volume.part_no }}</a>{{
+			volume.year ? ' (' + volume.year + ')' : ''
+		}}{{
+			volume.pages ? ', ' + volume.pages + ' p. ' : ''
+		}}
+	</li>
+</ul>

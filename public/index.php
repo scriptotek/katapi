@@ -1,49 +1,33 @@
 <?php
-/**
- * Laravel - A PHP Framework For Web Artisans
- *
- * @package  Laravel
- * @author   Taylor Otwell <taylorotwell@gmail.com>
- */
 
-/*
-|--------------------------------------------------------------------------
-| Register The Auto Loader
-|--------------------------------------------------------------------------
-|
-| Composer provides a convenient, automatically generated class loader
-| for our application. We just need to utilize it! We'll require it
-| into the script here so that we do not have to worry about the
-| loading of any our classes "manually". Feels great to relax.
-|
-*/
+$uri = (strpos($_SERVER['REQUEST_URI'], '?') === FALSE)
+	? $_SERVER['REQUEST_URI']
+	: substr($_SERVER['REQUEST_URI'], 0, strpos($_SERVER['REQUEST_URI'], '?'));
 
-require __DIR__.'/../bootstrap/autoload.php';
+$filename = substr($uri, strrpos($uri, '/') + 1);
 
-/*
-|--------------------------------------------------------------------------
-| Turn On The Lights
-|--------------------------------------------------------------------------
-|
-| We need to illuminate PHP development, so let's turn on the lights.
-| This bootstraps the framework and gets it ready for use, then it
-| will load up this application so that we can run it and send
-| the responses back to the browser and delight these users.
-|
-*/
+$useLaravel = false;
 
-$app = require_once __DIR__.'/../bootstrap/start.php';
+$ext = isset($_GET['format']) ? $_GET['format'] : '';
+if (empty($ext)) {
+	$ext = strpos($filename, '.') === FALSE ? '' : substr($filename, strpos($filename, '.') + 1);
+}
 
-/*
-|--------------------------------------------------------------------------
-| Run The Application
-|--------------------------------------------------------------------------
-|
-| Once we have the application, we can simply call the run method,
-| which will execute the request and send the response back to
-| the client's browser allowing them to enjoy the creative
-| and wonderful application we have whipped up for them.
-|
-*/
+if (3<= strlen($ext) && strlen($ext) <= 7) {
+	//die($ext);
+	$useLaravel = true;
+}
 
-$app->run();
+if ($useLaravel) {
+
+	require __DIR__.'/../bootstrap/autoload.php';
+	$app = require_once __DIR__.'/../bootstrap/start.php';
+	$app->run();
+
+} else {
+
+	// Serve "Static" HTML (single page app)
+	readfile('app.html');
+
+}
+

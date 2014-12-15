@@ -2,26 +2,28 @@
 
 @section('content')
 
+<div style="float: right;">
+	<a href="{{ URL::action('DocumentsController@getShow', array('id' => $doc->bibsys_id, 'format' => 'json')) }}">[JSON]</a>
+</div>
+
 <h2>
-	<i class="fa fa-book"></i>
-	{{ $doc->title }} ({{ $doc->year }})
+	{{ $doc->title }}{{ $doc->year ? ' (' . $doc->year . ')' : '' }}
 </h2>
 
 Record ID: {{ $doc->bibsys_id }}.
-
-<a href="{{ URL::action('DocumentsController@getShow', array('id' => $doc->bibsys_id, 'format' => 'json')) }}">JSON representation</a>. MARC21 source data from
+Show MARC21 source data from
 <a href="http://sru.bibsys.no/search/biblioholdings?operation=searchRetrieve&amp;version=1.1&amp;startRecord=1&amp;maximumRecords=10&amp;recordSchema=marcxchange&amp;query=bs.objektid%3D{{ $doc->bibsys_id }}">SRU</a>
-/
-<a href="http://oai.bibsys.no/oai/repository?verb=GetRecord&amp;metadataPrefix=marcxchange&amp;identifier=oai:bibsys.no:collection:{{ $doc->bibsys_id }}">OAI-PMH</a>
-
+or
+<a href="http://oai.bibsys.no/oai/repository?verb=GetRecord&amp;metadataPrefix=marcxchange&amp;identifier=oai:bibsys.no:collection:{{ $doc->bibsys_id }}">OAI-PMH</a>.
+Show record in
+<a href="http://ask.bibsys.no/ask/action/show?kid=biblio&amp;visningsformat=bibsysmarc&amp;pid={{ $doc->bibsys_id }}">Bibsys Ask</a> or
+<a href="http://bibsys-primo.hosted.exlibrisgroup.com/primo_library/libweb/action/dlDisplay.do?vid=UBO&amp;docId=BIBSYS_ILS{{ $doc->bibsys_id }}">Primo</a>.
 
 <div class="panel panel-default panel-descr">
   <!-- Default panel contents -->
   <div class="panel-heading">Description</div>
 
   <div class="panel-body">
-
-
 
 	<table class="table">
 		<tr>
@@ -33,7 +35,7 @@ Record ID: {{ $doc->bibsys_id }}.
 
 				@if ($doc->other_form)
 					<div>
-						<i class="fa fa-hand-o-right"></i> <a href="{{ $doc->other_form['uri'] }}">
+						<i class="fa fa-hand-o-right"></i> <a href="{{ URL::action('DocumentsController@getId', array($doc->other_form['id'])) }}">
 						{{ $doc->electronic ? 'A printed' : 'An electronic' }} edition</a>
 						is also available
 					</div>
@@ -81,23 +83,88 @@ Record ID: {{ $doc->bibsys_id }}.
 				</ul>
 			</td>
 		</tr>
-		@if (count($doc->series))
+
+		@if ($doc->is_multivolume)
+			<tr>
+				<td>
+					Volumes:
+				</td>
+				<td>
+					<volumes id="{{ $doc->bibsys_id }}"></volumes>
+				</td>
+			</tr>
+		@endif
+
+		@if (count($doc->forms))
 		<tr>
 			<td>
-				Series:
+				Form/genre:
 			</td>
 			<td>
 				<ul>
-				@foreach ($doc->series as $val)
+				@foreach ($doc->forms as $val)
 					<li>
-						{{ array_get($val, 'title', 'no title') }}
+	                    {{ array_get($val, 'term', '???') }}
+	                    {{ isset($val['vocabulary']) ? ' <span class="vocabulary">(' . array_get(Subject::$vocabularies, $val['vocabulary'], $val['vocabulary']) . ')</span>' : '' }}
 					</li>
 				@endforeach
 				</ul>
 			</td>
 		</tr>
+	    @endif
+
+		@if ($doc->preceding)
+			<tr>
+				<td>
+					Preceding:
+				</td>
+				<td>
+					{{ $doc->preceding['relationship_type'] }}:
+					<ul>
+						@foreach ($doc->preceding['items'] as $work)
+						<li>
+							<work id="{{ $work['id'] }}" part="{{ $work['related_parts'] }}"></work>
+						</li>
+						@endforeach
+					</ul>
+				</td>
+			</tr>
 		@endif
+
+		@if ($doc->succeeding)
+			<tr>
+				<td>
+					Succeeding:
+				</td>
+				<td>
+					{{ $doc->succeeding['relationship_type'] }}:
+					<ul>
+						@foreach ($doc->succeeding['items'] as $work)
+						<li>
+							<work id="{{ $work['id'] }}" part="{{ $work['related_parts'] }}"></work>
+						</li>
+						@endforeach
+					</ul>
+				</td>
+			</tr>
+		@endif
+
 	</table>
+
+	@if ($doc->is_series)
+		is series work
+	@endif
+
+	@if (count($doc->series))
+	<ul>
+	@foreach ($doc->series as $val)
+		<li>
+			Part of {{ array_get($val, 'title', 'no title') }}
+		</li>
+	@endforeach
+	</ul>
+    @endif
+
 </div>
 </div>
 
@@ -113,7 +180,8 @@ if (count($doc->subjects) == 0) {
 }
 foreach ($doc->holdings as $h) {
 	if (isset($h['callcode']) && $h['callcode'] == '-') {
-		$problems[] = 'No call code assigned to the copy ' . $h['id'] . ' yet.';
+		// $problems[] = 'No call code assigned to the copy ' . $h['id'] . ' yet.';
+		// NB/DEP bruker jo ikke oppstillingskode
 	}
 }
 ?>
@@ -169,7 +237,8 @@ foreach ($doc->classes as $class) {
 	if (count($subjectsAndClasses) == 0 || $subjectsAndClasses[count($subjectsAndClasses) - 1]['code'] != $class['system']) {
 		$subjectsAndClasses[] = array(
 			'code' => $class['system'],
-			'name' => $class['system'],
+            'name' => array_get(Classification::$systems, $class['system'], $class['system']),
+            'uri' => 'http://id.loc.gov/vocabulary/classSchemes/' . $class['system'],
 			'items' => array(),
 		);
 	}
@@ -198,8 +267,12 @@ foreach ($doc->classes as $class) {
 
     @foreach ($subjectsAndClasses as $voc)
 		<div style="margin-top:.5em">
-			<span style="color:#888; font-size:80%; font-style:italic; padding-left:.3em;display:inline-block;">
-				{{ $voc['name'] }}
+			<span class="vocabulary">
+            @if (isset($voc['uri']))
+                <a href="{{ $voc['uri'] }}">{{ $voc['name'] }}</a>
+            @else
+                {{ $voc['name'] }}
+            @endif
 			</span>
 			<ul>
 			    @foreach ($voc['items'] as $itm)
@@ -233,9 +306,9 @@ foreach ($doc->classes as $class) {
 	<li class="list-group-item">
 		<span class="fa {{ $holding['circulation_status'] == 'Available' ? 'fa-check-circle text-success' : 'fa-times-circle text-warning' }}"></span>
 
-		{{ $holding['location'] }} –
+		<library id="{{ str_replace('/', '_', $holding['sublocation']) }}"></library><br>
 		{{ $holding['shelvinglocation'] }}
-		{{ isset($holding['callcode']) ? '– ' . $holding['callcode'] : '' }} :
+		{{ (isset($holding['callcode']) && $holding['callcode'] != '-' ) ? '– ' . $holding['callcode'] : '' }} :
 		{{
 			$holding['circulation_status']
 		}}{{
