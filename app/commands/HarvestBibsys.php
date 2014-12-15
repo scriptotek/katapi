@@ -123,19 +123,19 @@ class HarvestBibsys extends Command {
 			'maxRetries' => 100,
 		));
 
-		if (!file_exists(storage_path("harvest"))) {
-			mkdir(storage_path("harvest"));
+		if (!file_exists(storage_path('harvest'))) {
+			mkdir(storage_path('harvest'));
 		}
 
-		$requestNo = 0;
 		$client->on('request.error', function($err) {
 			if (isset($this->progress)) $this->progress->clear();
 			$this->output->writeln("\n<error>" . $err . '</error>');
 			if (isset($this->progress)) $this->progress->display();
 		});
-		$client->on('request.complete', function($verb, $args, $body) use ($requestNo) {
-			$requestNo++;
-			$fname = storage_path("harvest/harvest$requestNo.xml");
+
+		$client->on('request.complete', function($verb, $args, $body) {
+			$sha = sha1(json_encode($args));
+			$fname = storage_path("harvest/$sha.xml");
 			file_put_contents($fname, $body);
 		});
 
