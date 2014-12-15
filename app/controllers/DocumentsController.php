@@ -16,6 +16,26 @@ class DocumentsController extends BaseController {
 		return View::make('hello');
 	}
 
+	/**
+	 * @api {get} /documents/show/:id Request Document information
+	 * @apiName GetDocument
+	 * @apiGroup Document
+	 *
+	 * @apiParam {Number} ID of the document. Can be Bibsys dokid, objektid or knyttid, or ISBN.
+	 * @apiExample Example usage:
+	 * curl -i http://localhost/documents/show/132038137
+	 *
+	 * @apiSuccess {String} served_by Indicates if the Document was found in, and retrieved from the local database ('local_db'),
+	 *                                or fetched directly from SRU ('bibsys_sru')
+	 * @apiSuccess {String} bibsys_id The Bibsys 'objektid'
+	 * @apiSuccess {String} material The material type. TODO: Document all the possible values
+	 * @apiSuccess {Boolean} electronic Whether the document is electronic (true) or physical (false)
+	 * @apiSuccess {Object[]} authors List of authors/creators
+	 * @apiSuccess {String} authors.name Author/creator name
+	 * @apiSuccess {String} authors.role E.g. 'main', 'aut', 'edt', 'added', ...
+	 * @apiSuccess {String} authors.authority Bibsys authority identifier
+	 *
+	 */
 	public function getShow($id)
 	{
 		$id = strtolower(trim($id));
