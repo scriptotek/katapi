@@ -6,6 +6,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement;
 use Scriptotek\Oai\Client as OaiClient;
+use Symfony\Component\Console\Helper\ProgressBar;
 
 class HarvestBibsys extends Command {
 
@@ -152,12 +153,12 @@ class HarvestBibsys extends Command {
 			die;
 		}
 
-		$this->progress = $this->getHelperSet()->get('progress');
-		$this->progress->start($this->output, $records->numberOfRecords);
+		$this->progress = new ProgressBar($this->output, $records->numberOfRecords);
+		$this->progress->setFormat('Harvesting: %current%/%max% [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory:6s%');
+		$this->progress->start();
 
 		$resumptionToken = '';
 		foreach ($records as $record) {
-			$this->progress->advance();
 			$status = $this->store($record, $oaiSet);
 			$counts[$status]++;
 			if ($resumptionToken != $records->getResumptionToken()) {
@@ -165,6 +166,7 @@ class HarvestBibsys extends Command {
 				Log::info('Got resumption token: ' . $resumptionToken);
 				file_put_contents(storage_path('resumption_token'), $resumptionToken); 
 			}
+			$this->progress->setCurrent($records->key());
 		}
 		$this->progress->finish();
 
