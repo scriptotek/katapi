@@ -50,50 +50,15 @@ class BibsysService {
 		return $res;
 	}
 
-	/**
-	 * Lookup a document by id (objektid, dokid, knyttid or isbn)
-	 *
-	 * @param  string  $id
-	 * @return QuiteSimpleXmlElement
-	 */
-	public function lookupId($id)
-	{
-		if (strlen($id) == 9) {
-			$res = array('id' => $id);
-			$res = $this->lookupIds($res);
-			$this->query = 'rec.identifier="{{id}}"';
-		} else if (strlen($id) == 10 || strlen($id) == 13) {
-			$res = array('isbn' => array($id));
-			$this->query = 'bs.isbn="{{isbn}}"';
-		} else {
-			App::abort(404, 'Invalid id format');
-		}
-
-		if (isset($res['id'])) {
-			Clockwork::info('Querying for id: ' . $res['id']);
-			$query = str_replace('{{id}}', $res['id'], $this->query);
-		}
-		if (isset($res['isbn']) && count($res['isbn']) > 0) {
-			Clockwork::info('Querying for isbn: ' . $res['isbn'][0]);
-			$query = str_replace('{{isbn}}', $res['isbn'][0], $this->query);
-		}
-
-		return $this->lookupQuery($query);
-	}
-
-	protected function lookupQuery($query) {
+	protected function execQuery($query, $start = 1, $count = 10) {
 
 		$sru = new SruClient($this->baseUrl, $this->sruOptions);
 		
-		$response = $sru->search($query, 1, 1);
+		$response = $sru->search($query, $start, $count);
 
-		if (count($response->records) == 0) {
-			App::abort(404, 'Record not found');
-		}
+		return $response;
 
-		$data = $response->records[0]->data;
-
-		return $data; // TO BE IMPORTED BY Document::import
+		//return $data; // TO BE IMPORTED BY Document::import
 
 
 		//foreach ($res as $key => $value) {
@@ -102,51 +67,85 @@ class BibsysService {
 
 		// BEGIN: RESPONSIBILITY OF Document::import, NO?
 
-			$parser = new Parser;
-			$r = $data->first('metadata/marc:collection/marc:record[@type="Bibliographic"]');
+		// 	$parser = new Parser;
+		// 	$r = $data->first('metadata/marc:collection/marc:record[@type="Bibliographic"]');
 
-			$rec = $parser->parse($r);
+		// 	$rec = $parser->parse($r);
 
-			// From Carbon dates to datetime strings
-			$rec->created = $rec->created->toDateTimeString();
-			$rec->modified = $rec->modified->toDateTimeString();
+		// 	// From Carbon dates to datetime strings
+		// 	$rec->created = $rec->created->toDateTimeString();
+		// 	$rec->modified = $rec->modified->toDateTimeString();
 
-			// To avoid conflict with the MongoDB ID
-			$rec->bibsys_id = $rec->id;
-			unset($rec->id);
+		// 	// To avoid conflict with the MongoDB ID
+		// 	$rec->bibsys_id = $rec->id;
+		// 	unset($rec->id);
 
-			$rec->source = $sru->urlTo($query, 1, 1);
+		// 	$rec->source = $sru->urlTo($query, 1, 1);
 
-			$holdings = array();
-			foreach ($data->xpath('metadata/marc:collection/marc:record[@type="Holdings"]') as $holding) {
-				$h = $parser->parse($holding)->toArray();
+		// 	$holdings = array();
+		// 	foreach ($data->xpath('metadata/marc:collection/marc:record[@type="Holdings"]') as $holding) {
+		// 		$h = $parser->parse($holding)->toArray();
 
-				// From Carbon dates to datetime strings
-				if (isset($h['created'])) {
-					$h['created'] = $h['created']->toDateTimeString();
-				}
-				if (isset($h['acquired'])) {
-					$h['acquired'] = $h['acquired']->toDateTimeString();
-				}
+		// 		// From Carbon dates to datetime strings
+		// 		if (isset($h['created'])) {
+		// 			$h['created'] = $h['created']->toDateTimeString();
+		// 		}
+		// 		if (isset($h['acquired'])) {
+		// 			$h['acquired'] = $h['acquired']->toDateTimeString();
+		// 		}
 
-				$holdings[] = $h;
+		// 		$holdings[] = $h;
+		// 	}
+		// 	$rec->holdings = $holdings;
+		// // END: RESPONSIBILITY OF Document::import
+
+		// return $this->showDocument($rec);
+	}
+
+	/**
+	 * Lookup a document by id (objektid, dokid, knyttid or isbn)
+	 *
+	 * @param  string  $id
+	 * @return QuiteSimpleXmlElement or null if record not found
+	 */
+	public function lookupId($id)
+	{
+		if (strlen($id) == 9) {
+			Clockwork::info('Querying Bibsys Id service for: ' . $id);
+			$res = array('id' => $id);
+			$res = $this->lookupIds($res);
+
+			if (empty($res['id'])) {
+				Clockwork::info('Empty result from Bibsys Id service');
+				return null;
 			}
-			$rec->holdings = $holdings;
-		// END: RESPONSIBILITY OF Document::import
 
-		return $this->showDocument($rec);
+			$query = sprintf('rec.identifier="%s"', $res['id']);
+		} else if (strlen($id) == 10 || strlen($id) == 13) {
+			$query = sprintf('bs.isbn="%s"', $id);
+		} else {
+			App::abort(404, 'Invalid id format');
+		}
+
+		Clockwork::info('Querying SRU for: ' .  $query);
+	
+		$res = $this->execQuery($query, 1, 1);
+
+		if ($res->error) Clockwork::error($res->error);
+
+		return (count($res->records) == 0) ? null : $res->records[0]->data;
 	}
 
 	/**
 	 * Lookup a document list by CQL query
 	 *
 	 * @param  string  $cql
+	 * @return array of QuiteSimpleXmlElement
 	 *  
 	 */
-	public function search($cql)
+	public function search($cql, $start = 1, $count = 50)
 	{
-		return 'Hello ' . $cql;
+		return $this->execQuery($cql, $start, $count);
 	}
-
 
 }

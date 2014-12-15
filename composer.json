@@ -7,7 +7,7 @@
 		"scriptotek/simplemarcparser": "dev-master",
 		"scriptotek/sru-client": "dev-master",
 		"scriptotek/oai-client": "dev-master",
-		"laravel/framework": "4.2.*",
+		"laravel/framework": "4.2.12",
 		"rmccue/requests": ">=1.6",
 		"willdurand/negotiation": "1.2.*",
 		"guzzle/guzzle": "~3.8.0",

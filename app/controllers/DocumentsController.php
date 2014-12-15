@@ -16,19 +16,36 @@ class DocumentsController extends BaseController {
 		return View::make('hello');
 	}
 
-	public function getShow($id)
+	/**
+	 *  Does content negotiation and 303 redirect
+	 */
+	public function getId($id)
 	{
+		return parent::negotiateContentType('DocumentsController', array(
+			'id' => $id
+		));
+	}
+
+	public function getShow($id, $format)
+    {
+        $live = (Request::get('live', 'true') == 'true');
+
 		$id = strtolower(trim($id));
 		$id = str_replace('-', '', $id);
 		$id = filter_var($id, FILTER_VALIDATE_REGEXP, array('options' => array('regexp'=>'([a-z0-9]+)')));
 		if (empty($id)) {
-			App::abort(404, 'Empty or invalid id');
+			return $this->abort(404, 'Empty or invalid id');
 		}
 
-		$rec = array('id' => $id);
-		$doc = Document::where('bibsys_id', '=', $id)  // objektid
-		               ->orWhere('barcode', '=', $id)  // knyttid
-		               ->first();
+        $rec = array('id' => $id);
+
+        if ($live) {
+            $doc = null;
+        } else {
+            $doc = Document::where('bibsys_id', '=', $id)  // objektid
+                           ->orWhere('barcode', '=', $id)  // knyttid
+                           ->first();
+        }
 		if ($doc) {
 
 			// Document is fetched from our local DB
@@ -37,12 +54,22 @@ class DocumentsController extends BaseController {
 		} else {
 
 			// Document is fetched from the BIBSYS SRU service
+
+			Clockwork::startEvent('fetchRecord', 'Fetch record from BIBSYS');
 			try {
 				$bs = new BibsysService;
 				$record = $bs->lookupId($id);
             } catch (\Guzzle\Http\Exception\CurlException $e) {
-				App::abort(503, 'Sorry, no contact with BIBSYS at the moment');
+				return $this->abort(503, 'Sorry, no contact with BIBSYS at the moment');
             }
+			Clockwork::endEvent('fetchRecord');
+
+            if (is_null($record)) {
+            	return $this->abort(404, 'Record not found');
+            }
+
+			Clockwork::startEvent('parseRecord', 'Parse record into Document model');
+
 			$doc = new Document();
 			$doc->served_by = 'bibsys_sru';
 
@@ -54,41 +81,23 @@ class DocumentsController extends BaseController {
 			try {
 				$doc->import($record);
 			} catch (Exception $e) {
-				Log::error("[$record->identifier] Failed to parse record. Exception '" . $e->getMessage() . "' in: " . $e->getFile() . ":" . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString());
-				App::abort(503, 'Failed to parse record. More info in the server log.');
+				$msg = "[$id] Failed to parse record. Exception '" . $e->getMessage() . "' in: " . $e->getFile() . ":" . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString();
+				Log::error($msg);
+				return $this->abort(503, 'Failed to parse record. More info in the server log.');
 			}
+			Clockwork::endEvent('parseRecord');
 
 		}
 
+		switch ($format) {
 
-		// Add links to guide the API user
+			case 'rdf.xml':
+			case 'rdf.nt':
+			case 'rdf.n3':
+			case 'rdf.jsonld':
+				App::abort(400, 'Format not supported yet');
 
-		if (isset($doc->other_form) && isset($doc->other_form['id'])) {
-			$of = $doc->other_form;
-			$of['uri']= URL::action('DocumentsController@getShow', array($doc->other_form['id']));
-			$doc->other_form = $of;
-		}
-
-		$links = array(
-			array(
-				'rel' => 'self',
-				'uri' => URL::current()
-			)
-		);
-		$doc->links = $links;
-
-
-		switch ($this->getRequestFormat()) {
 			case 'json':
-				// JSON-LD...
-				// $doc->{"@context"} = array(
-				// 	"other_form" => array(
-				// 		'uri' => array(
-				// 		     "@id" => "http://katapi.biblionaut.net/docs#Document",
-				// 		     "@type" => "@id",
-				// 		)
-				// 	)
-				// );
 				$res = $doc->toArray();
 				return Response::json($res);
 
@@ -105,18 +114,66 @@ class DocumentsController extends BaseController {
 
 	public function getSearch()
 	{
+
 		// TODO
-		if (!isset($_GET['cql'])) {
+		if (!isset($_GET['query'])) {
 			App::abort(404, 'No query given.');
 		}
-		$cql = $_GET['cql'];
-		$cql = filter_var($cql, FILTER_SANITIZE_URL);
+		$cql = Input::get('query');
 
+
+		Clockwork::startEvent('fetchRecords', 'Fetching records from BIBSYS');
 		$bs = new BibsysService;
-		$results = $bs->search($cql);
+		$res = $bs->search($cql, 1, 25);
 
-		App::abort(400, 'Not implemented yet');
+		Clockwork::endEvent('fetchRecords');
 
+		if (isset($res->error)) {
+			$results = array(
+				'documents' => array(),
+				'error' => $res->error,
+			);
+			return Response::json($results);
+		}
+
+		Clockwork::startEvent('parseRecords', 'Parsing records into our Document model');
+		$records = array_map(function($res) {
+
+			$doc = new Document();
+			$doc->served_by = 'bibsys_sru';
+
+			// Assign a temporary ID. This is done so we can attach subjects
+			// Without an ID, $doc->subjects() will return all subjects not
+			// attached to any documents!
+			$doc->_id = new MongoId;
+
+			try {
+				$doc->import($res->data);
+			} catch (Exception $e) {
+				print "Failed to parse record. Exception '" . $e->getMessage() . "' in: " . $e->getFile() . ":" . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString();
+
+				Log::error("Failed to parse record. Exception '" . $e->getMessage() . "' in: " . $e->getFile() . ":" . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString());
+				App::abort(503, 'Failed to parse record. More info in the server log.');
+			}
+
+			return $doc;
+
+		}, $res->records);
+		Clockwork::endEvent('parseRecords');
+
+		Clockwork::startEvent('serializeRecords', 'Serializing records to JSON');
+		$docs = array_map(function($doc) {
+
+			return $doc->toArray();
+
+		}, $records);
+		Clockwork::endEvent('serializeRecords');
+
+		$results = array(
+			'documents' => $docs
+		);
+
+		return Response::json($results);
 	}
 
 }
