@@ -14,7 +14,7 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
   return {
 
     postprocess: function(doc) {
-      console.log('Postproces');
+      // console.log('[DocumentUtils] Postprocessing document');
       var q = {};
       if (doc.subjects) {
         doc.subjects.forEach(function(subj) {
@@ -106,18 +106,18 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
 })
 
 .controller('DocumentsSearchController', ['$scope', '$location', 'LocalApi', function($scope, $location, LocalApi) {
-  console.log('Hello from DocumentsSearchController');
+  console.log('[DocumentsSearchController] Hello');
 
   $scope.query = $location.search().query;
-  console.log($scope.query);
 
   $scope.show = { 
-    subjectsAndClasses: true,
-    series: true,
-    notes: true,
+    indexing: false,
+    series: false,
+    notes: false,
     holdings: false
   };
 
+  showFromString($location.search().show ? $location.search().show : 'indexing,series,notes');
 
   function getSearch(query, nextRecordPosition) {
 
@@ -138,11 +138,30 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
     });
   }
 
+  function showToString() {
+    var s = [];
+    for (var key in $scope.show) {
+      if ($scope.show.hasOwnProperty(key) && $scope.show[key]) {
+        s.push(key);
+      }
+    }
+    return s.join(',');
+  }
+
+  function showFromString(s) {
+    s = s.split(',');
+    for (var key in $scope.show) {
+      if ($scope.show.hasOwnProperty(key)) {
+        $scope.show[key] = (s.indexOf(key) != -1);
+      }
+    }
+  }
 
   $scope.search = function() {
     $location.path('/documents/search').search({
       'query': $scope.query,
       'continue': $scope.nextRecordPosition,
+      'show': showToString()
     });
   };
 
