@@ -156,6 +156,9 @@ h2 {
  margin: 2px 0;
  padding: 0;
 }
+.subject:link, .subject:visited {
+
+}
 .searchResults .subjectSystem {
   display: block;
   margin: 1px 10px 0 0;

@@ -1,85 +1,78 @@
 
 <div>
+  <h3><a href="/documents/search">Søk</a></h3>
 
-	<form class="searchForm" ng-submit="search()" ng-class="{busy:busy}">
-		<!--<label for="query">CQL:</label>-->
-   	<input type="text" id="query" ng-model="query" name="query">
+  <form class="searchForm" ng-submit="search()" ng-class="{busy:busy}">
+    <!--<label for="query">CQL:</label>-->
+    <input type="text" id="query" ng-model="query" name="query">
     <a href="#" class="clearSearch" title="Tøm søk" ng-click="query=''">
       <i class="fa fa-times"></i>
     </a>
-		<button type="submit"><i class="fa fa-search"></i> Søk</button>
-	</form>
-	<p>
-		Søkebyggesteiner:
+    <button type="submit"><i class="fa fa-search"></i> Søk</button>
+  </form>
+  <p>
+    Søkebyggesteiner:
     <a ng-click='query = query + " bs.tittel-ord=\"top quark\""'>bs.tittel-ord="top quark"</a>
-		•
-		<a ng-click='query = query + " bs.lokoeo-frase=\"Sild\" AND bs.avdeling=\"ureal?\""'>bs.lokoeo-frase="Sild" AND bs.avdeling="ureal?"</a>
+    •
+    <a ng-click='query = query + " bs.lokoeo-frase=\"Sild\" AND bs.avdeling=\"ureal?\""'>bs.lokoeo-frase="Sild" AND bs.avdeling="ureal?"</a>
     •
     <a ng-click='query = query + " sortBy bs.aar/sort.descending"'>sortBy bs.aar/sort.descending</a>
 
-	</p>
+  </p>
 
-	Vis:
-	<label><input type="checkbox" ng-model="show.subjectsAndClasses"> emner og klasser</label>
-	<label><input type="checkbox" ng-model="show.series"> serier</label>
-	<label><input type="checkbox" ng-model="show.notes"> noter</label>
-	<label><input type="checkbox" ng-model="show.holdings"> beholdning</label>
-	
-	<h2>
-		Søkeresultater
-	</h2>
+  Vis:
+  <label><input type="checkbox" ng-model="show.indexing"> emner og klasser</label>
+  <label><input type="checkbox" ng-model="show.series"> serier</label>
+  <label><input type="checkbox" ng-model="show.notes"> noter</label>
+  <label><input type="checkbox" ng-model="show.holdings"> beholdning</label>
 
-	<div ng-show="busy">
-		<div id="loader-wrapper">
-		    <div id="loader"></div>
-		</div>
-	</div>
+  <hr>
 
-	<div ng-show="error" class="alert alert-danger" role="alert">FEIL: {{ error }}</div>
+  <div ng-show="numberOfRecords" style="margin:.5em 0; padding: .5em;">
+    {{ numberOfRecords ? numberOfRecords : 'Ingen' }} dokumenter funnet.
+    Viser {{ docs.length }}.
+    <span ng-show="busy">Henter flere...</span>
+  </div>
+    
+  <ul class="searchResults fa-ul" infinite-scroll="moreResults()" infinite-scroll-disabled="busy" infinite-scroll-distance="4">
 
-	<div ng-show="docs.length == 0">
-		Ingen treff
-	</div>
-
-	<ul class="searchResults fa-ul">
-
-		<li ng-repeat="doc in docs">
-			<i class="fa-li fa fa-angle-double-right"></i>
-			<h3>
-				<a href="/documents/show/{{ doc.bibsys_id }}">{{ doc.title }}{{
+    <li ng-repeat="doc in docs">
+      <i class="fa-li fa fa-angle-double-right"></i>
+      <h3>
+        <a href="/documents/show/{{ doc.bibsys_id }}">{{ doc.title }}{{
           doc.part_no ? ' – ' + doc.part_no : '' 
         }}</a>{{
           doc.year ? ' (' + doc.year + ')' : ''
         }}
-			</h3>
+      </h3>
 
-			<!--
-			  EMNER OG KLASSER
-			  -->
-			<div ng-show="show.subjectsAndClasses">
-				<div class="subjectSystem" ng-repeat="(voc, items) in doc.subjectsAndClasses">
-					<span style="color: #888">
-						<i class="fa fa-tags"></i>
-						{{ vocabularies[voc] || voc }}:
-					</span>
-					<ul>
-						<li ng-repeat="itm in items">
-							<a href="{{ itm.url }}"> {{ itm.term }}</a>
-							<span style="color:#888;" ng-show="itm.extras">
-								(<!--{{ implode(', ', $itm['extras']) }}-->)
-							</span>
-						</li>
-					</ul>
-				</div>
-			</div>
+      <!--
+        EMNER OG KLASSER
+        -->
+      <div ng-show="show.indexing">
+        <div class="subjectSystem" ng-repeat="(voc, items) in doc.subjectsAndClasses">
+          <span style="color: #888">
+            <i class="fa fa-tags"></i>
+            {{ vocabularies[voc] || voc }}:
+          </span>
+          <ul>
+            <li ng-repeat="itm in items">
+              <a class="subject" href="{{ itm.url }}"> {{ itm.term }}</a>
+              <span style="color:#888;" ng-show="itm.extras">
+                (<!--{{ implode(', ', $itm['extras']) }}-->)
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
 
-			<!--
-			  SERIER OG NOTER
-			  -->
+      <!--
+        SERIER OG NOTER
+        -->
 
-			<ul class="seriesAndNotes">
+      <ul class="seriesAndNotes">
 
-  			  <li ng-repeat="series in doc.series" ng-show="show.series">
+          <li ng-repeat="series in doc.series" ng-show="show.series">
                   <i class="fa fa-angle-double-up"></i> 
                   Del av serien: {{series.title}}
                   <span ng-show="series.volume">
@@ -149,6 +142,15 @@
                 </li>
               </ul>
 
-		</li>		
-	</ul>
+    </li>   
+  </ul>
+
+  <div ng-show="error" class="alert alert-danger" role="alert">FEIL: {{ error }}</div>
+
+  <div ng-show="busy">
+    <div id="loader-wrapper">
+        <div id="loader"></div>
+    </div>
+  </div>
+
 </div>

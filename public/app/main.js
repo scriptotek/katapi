@@ -1,6 +1,6 @@
 
 // Declare app level module which depends on filters, and services
-angular.module('katapi', ['ngRoute', 'katapi.api', 'katapi.welcome', 'katapi.documents'])
+angular.module('katapi', ['ngRoute', 'infinite-scroll', 'katapi.api', 'katapi.welcome', 'katapi.documents'])
 
 // Setup routes
 .config(['$routeProvider', '$locationProvider', function($routeProvider, $locationProvider) {

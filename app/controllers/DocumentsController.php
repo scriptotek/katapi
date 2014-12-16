@@ -121,10 +121,11 @@ class DocumentsController extends BaseController {
 		}
 		$cql = Input::get('query');
 
+		$nextRecordPosition = intval(Input::get('continue', '1'));
 
 		Clockwork::startEvent('fetchRecords', 'Fetching records from BIBSYS');
 		$bs = new BibsysService;
-		$res = $bs->search($cql, 1, 25);
+		$res = $bs->search($cql, $nextRecordPosition, 25);
 
 		Clockwork::endEvent('fetchRecords');
 
@@ -170,7 +171,9 @@ class DocumentsController extends BaseController {
 		Clockwork::endEvent('serializeRecords');
 
 		$results = array(
-			'documents' => $docs
+			'numberOfRecords' => $res->numberOfRecords,
+			'nextRecordPosition' => $res->nextRecordPosition,
+			'documents' => $docs,
 		);
 
 		return Response::json($results);

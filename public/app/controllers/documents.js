@@ -118,18 +118,47 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
     holdings: false
   };
 
-  $scope.busy = true;
-  LocalApi.search($scope.query).then(function(docs) {
-    $scope.busy = false;
-    console.log(docs);
-    $scope.docs = docs;
-  }, function(error) {
-    $scope.error = error ? error : 'Søket gikk ut i feil';
-    $scope.busy = false;
-  });
+
+  function getSearch(query, nextRecordPosition) {
+
+    if (!query || query.length === 0) {
+      return;
+    }
+    $scope.busy = true;
+    LocalApi.search(query, nextRecordPosition).then(function(results) {
+      console.log('[DocumentsSearchController] Server returned ' + results.documents.length + ' results');
+      // console.log(results);
+      Array.prototype.push.apply($scope.docs, results.documents);
+      $scope.numberOfRecords = results.numberOfRecords;
+      $scope.nextRecordPosition = results.nextRecordPosition;
+      $scope.busy = false;
+    }, function(error) {
+      $scope.error = error ? error : 'Søket gikk ut i feil';
+      $scope.busy = false;
+    });
+  }
+
 
   $scope.search = function() {
-    $location.path('/documents/search').search({ query: $scope.query });
+    $location.path('/documents/search').search({
+      'query': $scope.query,
+      'continue': $scope.nextRecordPosition,
+    });
+  };
+
+  $scope.docs = [];
+  $scope.numberOfRecords = 0;
+  $scope.nextRecordPosition = 1;
+
+  //getSearch($scope.query, $scope.nextRecordPosition);
+
+  $scope.moreResults = function() {
+    if ($scope.nextRecordPosition) {
+      console.log('[DocumentsSearchController] Fetch more results');
+      getSearch($scope.query, $scope.nextRecordPosition);
+    } else {
+      console.log('[DocumentsSearchController] Reached end of list');
+    }
   };
 
 }])

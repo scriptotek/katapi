@@ -26,9 +26,9 @@ angular.module('katapi.api', ['katapi.documents'])
     return deferred.promise;
   };
 
-  this.search = function(query) {
+  this.search = function(query, nextRecordPosition) {
 
-    console.log('Searching for: ' + query);
+    console.log('[LocalApi] Searching for: ' + query + ', starting at ' + nextRecordPosition);
 
     var deferred = $q.defer();
 
@@ -37,8 +37,9 @@ angular.module('katapi.api', ['katapi.documents'])
       method: 'GET',
       cache: true,
       params: {
-        query: query,
-        format: 'json'
+        'query': query,
+        'continue': nextRecordPosition,
+        'format': 'json'
       }
     })
     .error(function(response, status, headers, config) {
@@ -55,7 +56,7 @@ angular.module('katapi.api', ['katapi.documents'])
         return DocumentUtils.postprocess(doc);
       });
 
-      deferred.resolve(data.documents);
+      deferred.resolve(data);
     });
   
     return deferred.promise;
