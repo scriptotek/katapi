@@ -1,0 +1,156 @@
+
+<div>
+  <h3><a href="/documents/search">Søk</a></h3>
+
+  <form class="searchForm" ng-submit="search()" ng-class="{busy:busy}">
+    <!--<label for="query">CQL:</label>-->
+    <input type="text" id="query" ng-model="query" name="query">
+    <a href="#" class="clearSearch" title="Tøm søk" ng-click="query=''">
+      <i class="fa fa-times"></i>
+    </a>
+    <button type="submit"><i class="fa fa-search"></i> Søk</button>
+  </form>
+  <p>
+    Søkebyggesteiner:
+    <a ng-click='query = query + " bs.tittel-ord=\"top quark\""'>bs.tittel-ord="top quark"</a>
+    •
+    <a ng-click='query = query + " bs.lokoeo-frase=\"Sild\" AND bs.avdeling=\"ureal?\""'>bs.lokoeo-frase="Sild" AND bs.avdeling="ureal?"</a>
+    •
+    <a ng-click='query = query + " sortBy bs.aar/sort.descending"'>sortBy bs.aar/sort.descending</a>
+
+  </p>
+
+  Vis:
+  <label><input type="checkbox" ng-model="show.indexing"> emner og klasser</label>
+  <label><input type="checkbox" ng-model="show.series"> serier</label>
+  <label><input type="checkbox" ng-model="show.notes"> noter</label>
+  <label><input type="checkbox" ng-model="show.holdings"> beholdning</label>
+
+  <hr>
+
+  <div ng-show="numberOfRecords" style="margin:.5em 0; padding: .5em;">
+    {{ numberOfRecords ? numberOfRecords : 'Ingen' }} dokumenter funnet.
+    Viser {{ docs.length }}.
+    <span ng-show="busy">Henter flere...</span>
+  </div>
+    
+  <ul class="searchResults fa-ul" infinite-scroll="moreResults()" infinite-scroll-disabled="busy" infinite-scroll-distance="4">
+
+    <li ng-repeat="doc in docs">
+      <i class="fa-li fa fa-angle-double-right"></i>
+      <h3>
+        <a href="/documents/show/{{ doc.bibsys_id }}">{{ doc.title }}{{
+          doc.part_no ? ' – ' + doc.part_no : '' 
+        }}</a>{{
+          doc.year ? ' (' + doc.year + ')' : ''
+        }}
+      </h3>
+
+      <!--
+        EMNER OG KLASSER
+        -->
+      <div ng-show="show.indexing">
+        <div class="subjectSystem" ng-repeat="(voc, items) in doc.subjectsAndClasses">
+          <span style="color: #888">
+            <i class="fa fa-tags"></i>
+            {{ vocabularies[voc] || voc }}:
+          </span>
+          <ul>
+            <li ng-repeat="itm in items">
+              <a class="subject" href="{{ itm.url }}"> {{ itm.term }}</a>
+              <span style="color:#888;" ng-show="itm.extras">
+                (<!--{{ implode(', ', $itm['extras']) }}-->)
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!--
+        SERIER OG NOTER
+        -->
+
+      <ul class="seriesAndNotes">
+
+          <li ng-repeat="series in doc.series" ng-show="show.series">
+                  <i class="fa fa-angle-double-up"></i> 
+                  Del av serien: {{series.title}}
+                  <span ng-show="series.volume">
+                    (bind/heftenr. {{series.volume}})
+                  </span>
+                  <span ng-show="doc.series.issn">
+                    (ISSN {{doc.series.issn}})
+                  </span>
+              </li>
+
+              <li ng-show="show.series && doc.part_of">
+                  <i class="fa fa-angle-double-up"></i> 
+                  Del av flerbindsverket: {{doc.part_of.title}}
+                  <span ng-show="doc.part_of.volume">
+                    (bind/heftenr. {{doc.part_of.volume}})
+                  </span>
+              </li>
+
+              <li ng-show="show.series && doc.preceding">
+                <i class="fa fa-angle-double-left"></i> 
+                {{doc.preceding.note}}
+                <span ng-show="!doc.preceding.note">
+                  {{doc.preceding.relationship_type}}
+                  <span ng-repeat="itm in doc.preceding.items">
+                    {{itm.id}} {{itm.related_parts}},
+                  </span>
+                </span>
+              </li>
+
+              <li ng-show="show.series && doc.succeeding">
+                <i class="fa fa-angle-double-right"></i> 
+                {{doc.succeeding.note}}
+                <span ng-show="!doc.succeeding.note">
+                  {{doc.succeeding.relationship_type}}
+                  <span ng-repeat="itm in doc.succeeding.items">
+                    {{itm.id}} {{itm.related_parts}},
+                  </span>
+                </span>
+              </li>
+
+              <li ng-repeat="note in doc.notes" ng-show="show.notes">
+                <i class="fa fa-comment-o"></i> {{note}}
+              </li>
+
+            </ul>
+
+            <ul class="holdings" ng-show="show.holdings">
+                <li ng-repeat="holding in doc.holdings">
+                  <i class="fa fa-hand-o-right"></i> 
+
+                  {{holding.id}}:
+
+                  <span class="collection">{{holding.shelvinglocation}}</span>
+                  {{holding.callcode}}
+                  <span ng-show="holding.circulation_status!=='Available'">(<strong>{{holding.circulation_status}}</strong>)</span>
+                  <span ng-repeat="note in holding.public_notes">
+                      <i class="fa fa-comment-o"></i> {{note}}
+                  </span>
+                  <span ng-repeat="note in holding.nonpublic_notes">
+                      <i class="fa fa-comment-o"></i> {{note}}
+                  </span>
+                  <span ng-show="holding.holdings">
+                      <i class="fa fa-folder-open-o"></i> {{holding.holdings}}
+                  </span>
+
+                  <!--<small style="color:#888;">({{holding.dokid}})</small>-->
+                </li>
+              </ul>
+
+    </li>   
+  </ul>
+
+  <div ng-show="error" class="alert alert-danger" role="alert">FEIL: {{ error }}</div>
+
+  <div ng-show="busy">
+    <div id="loader-wrapper">
+        <div id="loader"></div>
+    </div>
+  </div>
+
+</div>

@@ -48,32 +48,17 @@ Log::useFiles(storage_path().'/logs/laravel.log');
 
 
 function myExceptionHandler(Exception $exception, $code) {
-
-	$negotiator = new \Negotiation\FormatNegotiator();
-	$acceptHeader = $_SERVER['HTTP_ACCEPT'];
-
-	$priorities = array('text/html', 'application/json');
-	$format = $negotiator->getBest($acceptHeader, $priorities);
-
-	if ($format->getValue() == 'text/html') {
-		return Response::view('errors.missing', array(
-			'message' => $exception->getMessage() ?: 'Page not found',
-			'code' => $code,
-		), $code);
-	} else if ($format->getValue() == 'application/json') {
-		return Response::json(array(
-			'error' => $exception->getMessage() ?: 'Page not found',
-			'code' => $code,
-		), $code);
-	}
-
+	$c = new BaseController;
+	return $c->abort($code, $exception->getMessage());
 }
 
 App::error(function(Exception $exception, $code)
 {
 	Log::error($exception);
 
-	return myExceptionHandler($exception, $code);
+	if ($code != 500) { // We want to debug those directly
+		return myExceptionHandler($exception, $code);
+	}
 });
 
 App::missing(function(Exception $exception) {

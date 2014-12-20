@@ -20,8 +20,15 @@ Route::get('/', function()
 
 //Route::get('documents/show/{id}', 'BibsysController@getShow');
 
-Route::get('subjects/{vocabulary}/{term}', 'SubjectsController@getShow');
-Route::get('documents/show/{id}', 'DocumentsController@getShow')
+Route::get('subjects/{vocabulary}/{term}.{format}', 'SubjectsController@getShow');
+Route::get('subjects/{vocabulary}/{term}', 'SubjectsController@getId');
+
+Route::get('classes/{system}/{number}.{format}', 'ClassesController@getShow');
+Route::get('classes/{system}/{number}', 'ClassesController@getId');
+
+Route::get('documents/show/{id}.{format}', 'DocumentsController@getShow')
+	->where(array('id' => '[0-9a-zA-Z-]+', 'format' => '[a-z.]+'));
+Route::get('documents/show/{id}', 'DocumentsController@getId')
 	->where(array('id' => '[0-9a-zA-Z-]+'));
 
 // Route::get('bibsys/{id}', function($id) {
@@ -29,10 +36,15 @@ Route::get('documents/show/{id}', 'DocumentsController@getShow')
 // });
 
 # /documents/search
-Route::get('documents/search', 'BibsysController@getSearch');
-Route::get('bibsys/search', function() {
+Route::get('documents/search', 'DocumentsController@getSearch');
+
+# /libraries/show
+Route::get('libraries/show/{id}', 'LibrariesController@getShow');
+
+
+/*Route::get('bibsys/search', function() {
 	return Redirect::action('BibsysController@getSearch');
-});
+});*/
 
 # /covers/show/:id
 Route::get('covers/show/{id}', 'CoversController@getShow');

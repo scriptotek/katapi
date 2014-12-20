@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="katapi">
 <head>
   <meta charset="utf-8" />
   <title>KatAPI</title>
@@ -20,12 +20,13 @@
 
   <link href="{{ URL::to('app.css') }}" rel="stylesheet">
 
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular.min.js"></script>
   <script src="{{ URL::to('app.js') }}"></script>
 
 </head>
 <body>
 
-  <div class="container">
+  <div class="container" ng-controller="MainCtrl">
     <h1>
       <i class="fa fa-cogs" style="color: #ddd;"></i>
       <a href="{{ URL::to('/') }}">katapi</a>

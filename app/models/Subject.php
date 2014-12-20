@@ -19,6 +19,7 @@ class Subject extends Eloquent {
 		'humord' => 'Humord',
 		'tekord' => 'Tekord',
 		'lcsh' => 'Library of Congress Subject Headings',
+		'mesh' => 'MeSH',
 		'psychit' => 'APA Thesaurus of psychological index terms',
 	);
 
@@ -42,7 +43,7 @@ class Subject extends Eloquent {
 		foreach ($this->documents()->get() as $doc) {
 			$docs[] = array(
 				'id' => $doc->bibsys_id,
-				'uri' =>  URL::action('DocumentsController@getShow', array('id' => $doc->bibsys_id)),
+				'uri' =>  URL::action('DocumentsController@getId', array('id' => $doc->bibsys_id)),
 			); 
 		}
 

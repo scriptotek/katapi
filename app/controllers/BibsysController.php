@@ -5,7 +5,7 @@ use Danmichaelo\SimpleMarcParser\BibliographicParser;
 use Danmichaelo\SimpleMarcParser\HoldingsParser;
 use \Guzzle\Http\Client as HttpClient;
 
-class BibsysController extends DocumentsController implements VendorInterface {
+class BibsysController extends DocumentsController {
 
 	/**
 	 * SRU base url
@@ -55,12 +55,8 @@ class BibsysController extends DocumentsController implements VendorInterface {
 		return $res;
 	}
 
-	/**
-	 * Display the specified resource.
-	 *
-	 * @param  string  $id
-	 * @return Response
-	 */
+
+	/*
 	public function getShow($id)
 	{
 		$id = strtolower(trim($id));
@@ -92,7 +88,7 @@ class BibsysController extends DocumentsController implements VendorInterface {
 		$cql = $_GET['cql'];
 		$cql = filter_var($cql, FILTER_SANITIZE_URL);
 		return 'Hello ' . $cql;
-	}
+	}*/
 
 
 }

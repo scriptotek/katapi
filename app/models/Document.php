@@ -7,6 +7,8 @@ use Scriptotek\SimpleMarcParser\ParserException;
 
 class Document extends Eloquent {
 
+	protected $classifications = array();
+
 	protected $collection = 'documents';
 
 	protected $appends = array('subjects', 'classes');
@@ -16,7 +18,7 @@ class Document extends Eloquent {
 	public function getHoldingsAttribute($value)
 	{
 		if (is_null($value)) {
-			return null;
+			return array();
 		}
 		foreach ($value as $key => $val) {
 			if (isset($val['created'])) {
@@ -50,6 +52,25 @@ class Document extends Eloquent {
      */
     public function attributesToArray()
     {
+
+
+		// Add links to guide the API user
+
+		if (isset($this->other_form) && isset($this->other_form['id'])) {
+			$of = $this->other_form;
+			$of['uri'] = URL::action('DocumentsController@getId', array($this->other_form['id']));
+			$this->other_form = $of;
+		}
+
+		$links = array(
+			array(
+				'rel' => 'self',
+				'uri' => URL::current()
+			)
+		);
+		$this->links = $links;
+
+
         $attributes = parent::attributesToArray();
 
         // DateTime objects need to be converted to strings. Eloquent handles objects in the
@@ -83,7 +104,7 @@ class Document extends Eloquent {
 			$s = array(
 				'vocabulary' => $i->vocabulary,
 				'indexTerm' => $i->indexTerm,
-				'uri' => URL::action('SubjectsController@getShow', array('vocabulary' => $i->vocabulary, 'term' => $i->indexTerm)),
+				'uri' => URL::action('SubjectsController@getId', array('vocabulary' => $i->vocabulary, 'term' => $i->indexTerm)),
 			);
 			if (isset($i->id)) $s['id'] = $i->id;
 			$subjects[] = $s;
@@ -103,7 +124,7 @@ class Document extends Eloquent {
 		$classes = array();
 		foreach ($this->classifications as $i) {
 			$s = $i;
-			$s['uri'] = URL::action('ClassController@getShow', array('system' => $i['system'], 'number' => $i['number']));
+			$s['uri'] = URL::action('ClassesController@getId', array('system' => $i['system'], 'number' => $i['number']));
 			$classes[] = $s;
 		}
 
@@ -139,6 +160,8 @@ class Document extends Eloquent {
 					throw new Exeption($err);
 				}
 				$this->bibsys_id = $parsed->id;
+
+				Clockwork::info('Importing: ' . $parsed->id);
 
 				foreach ($parsed->toArray() as $key => $val) {
 					switch ($key) {
@@ -246,6 +269,8 @@ class Document extends Eloquent {
 				$holdings[] = $holding;
 
 			}
+
+
 		}
 
 		if ($this->holdings != $holdings) {  // Weak comparison

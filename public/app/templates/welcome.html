@@ -1,6 +1,3 @@
-@extends('layouts.master')
-
-@section('content')
 
 <p>
 	Library metadata transducer. API is <em>not</em> stable. <a href="https://github.com/scriptotek/katapi">More info</a>
@@ -11,17 +8,6 @@
 </p>
 
 <h2>GET /documents/show/<span class="var">:id</span></h2>
-<?php
-	$example1 = URL::action('DocumentsController@getId', array('id' => '132038137'));
-	$example2 = URL::action('DocumentsController@getId', array('id' => '12k189510'));
-	$example3 = URL::action('DocumentsController@getId', array('id' => '050076NA0'));
-	$example4 = URL::action('DocumentsController@getId', array('id' => '1-107-01395-X'));
-	$example5 = URL::action('DocumentsController@getId', array('id' => '841188564'));
-	$exampleS1 = URL::action('SubjectsController@getId', array(
-		'vocabulary' => 'noubomn', 'term' => 'Steganografi'
-	));
-?>
-
 <p>
 	Returns a single Document (book, journal, media), specified by the <span class="var">:id</span>
 	parameter.
@@ -33,23 +19,27 @@
 <ul>
 	<li>
 		<span class="var">:id</span> is a <em>BIBSYS objektid</em>:<br>
-		<a href="{{ $example1 }}">{{ $example1 }}</a>		
+		<a href="/documents/show/132038137">/documents/show/132038137</a>		
 	</li>
 	<li>
 		<span class="var">:id</span> is a <em>BIBSYS dokid</em>:<br>
-		<a href="{{ $example2 }}">{{ $example2 }}</a>		
+		<a href="/documents/show/12k189510">/documents/show/12k189510</a>		
     </li>
 	<li>
 		<span class="var">:id</span> is a <em>BIBSYS knyttid</em>:<br>
-		<a href="{{ $example3 }}">{{ $example3 }}</a>
+		<a href="/documents/show/050076NA0">/documents/show/050076NA0</a>
     </li>
     <li>
 		<span class="var">:id</span> is an <em>ISBN</em> (ISBN10 or 13, hyphens optional): <br>
-		<a href="{{ $example4 }}">{{ $example4 }}</a>
+		<a href="/documents/show/1-107-01395-X">/documents/show/1-107-01395-X</a>
     </li>
     <li>
 		Complex journal succeeding entry:<br>
-        <a href="{{ $example5 }}">{{ $example5 }}</a>
+        <a href="/documents/show/841188564">/documents/show/841188564</a>
+    </li>
+    <li>
+        Relator codes for authors:<br>
+        <a href="/documents/show/143806734">/documents/show/143806734</a>
     </li>
 </ul>
 
@@ -62,14 +52,10 @@
 <ul>
 	<li>
 		The term "Steganografi" in the vocabulary "noubomn" (Realfagstermer):<br>
-		<a href="{{ $exampleS1 }}">{{ $exampleS1 }}</a>		
+		<a href="/subjects/noubomn/Steganografi">/subjects/noubomn/Steganografi</a>		
 	</li>
 </ul>
 
-<?php
-	$example1 = URL::action('DocumentsController@getSearch', array(
-		'query' => 'bs.serieobjektid=042457270'));
-?>
 <h2>GET /documents/search?query=<span class="var">:query</span></h2>
 where <span class="var">:query</span> is a html encoded CQL query.
 <p>
@@ -78,7 +64,7 @@ where <span class="var">:query</span> is a html encoded CQL query.
 <ul>
 	<li>
 		Return the volumes of a multi volume work:<br>
-		<a href="{{ $example1 }}">{{ $example1 }}</a>
+		<a href="/documents/search/?query=bs.serieobjektid%3D042457270">/documents/search/?query=bs.serieobjektid%3D042457270</a>
 	</li>
 </ul>
 
@@ -99,7 +85,3 @@ Set the preferred cover for a given document
 <h2>POST /covers/store/:document/:cover</h2>
 Store a cover for the given document.
 …
-
-
-
-@stop
