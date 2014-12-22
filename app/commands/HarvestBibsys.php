@@ -22,7 +22,7 @@ class HarvestBibsys extends Command {
 	 *
 	 * @var string
 	 */
-	protected $description = 'Harvest records from OAI service and update database.';
+	protected $description = 'Harvest records from OAI-PMH service and update database.';
 
 	/**
 	 * Create a new command instance.
@@ -121,7 +121,8 @@ class HarvestBibsys extends Command {
 		$client = new OaiClient($url, array(
 			'schema' => 'marcxchange',
 			'user-agent' => 'KatApi/0.1',
-			'maxRetries' => 100,
+			'max-retries' => 100,
+            'sleep-time-on-error' => 45,
 		));
 
 		if (!file_exists(storage_path('harvest'))) {
@@ -147,19 +148,15 @@ class HarvestBibsys extends Command {
 			$resumptionToken
 		);
 
-		if ($records->error) {
-			$this->progress->clear();
-			$this->output->writeln("\n<error>" . $records->errorCode . ' : ' . $records->error . '</error>');
-			die;
-		}
-
 		$this->progress = new ProgressBar($this->output, $records->numberOfRecords);
 		$this->progress->setFormat('Harvesting: %current%/%max% [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory:6s%');
 		$this->progress->start();
 
-		$resumptionToken = '';
+		// $resumptionToken = '';
 		foreach ($records as $record) {
-			$status = $this->store($record, $oaiSet);
+			// $status = $this->store($record, $oaiSet);
+			$status = 'changed'; // dummy
+
 			$counts[$status]++;
 			if ($resumptionToken != $records->getResumptionToken()) {
 				$resumptionToken = $records->getResumptionToken();
