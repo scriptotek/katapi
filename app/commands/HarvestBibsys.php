@@ -153,8 +153,13 @@ class HarvestBibsys extends Command {
 		$this->progress->start();
 
 		// $resumptionToken = '';
-		foreach ($records as $record) {
-			// $status = $this->store($record, $oaiSet);
+		while (true) {
+
+			if (!$records->valid()) {
+				break 1;
+			}
+			$record = $records->current();
+
 			$status = 'changed'; // dummy
 
 			$counts[$status]++;
@@ -164,6 +169,23 @@ class HarvestBibsys extends Command {
 				file_put_contents(storage_path('resumption_token'), $resumptionToken); 
 			}
 			$this->progress->setCurrent($records->key());
+
+
+			while (true) {
+				$attempt = 1;
+				try {
+					$records->next();
+					break 1;
+				} catch (\Scriptotek\Oai\BadResponseError $e) {
+					// OAI-PMH servers really shouldn't throw
+					// random errors now and then, but some do...
+					$attempt += 1;
+					if ($attempt > 50) {
+						throw $e;
+					}
+					sleep(30);
+				}
+			}
 		}
 		$this->progress->finish();
 
