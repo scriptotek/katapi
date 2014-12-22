@@ -46,7 +46,6 @@ Log::useFiles(storage_path().'/logs/laravel.log');
 |
 */
 
-
 function myExceptionHandler(Exception $exception, $code) {
 	$c = new BaseController;
 	return $c->abort($code, $exception->getMessage());
@@ -56,10 +55,16 @@ App::error(function(Exception $exception, $code)
 {
 	Log::error($exception);
 
+	Mail::send('emails.exception', array('msg' => nl2br((string) $exception)), function($message) {
+		$message->to(Config::get('mail.admin'))
+			->subject('[KatApi] Error');
+	});
+
 	if ($code != 500) { // We want to debug those directly
 		return myExceptionHandler($exception, $code);
 	}
 });
+
 
 App::missing(function(Exception $exception) {
 	return myExceptionHandler($exception, 404);
