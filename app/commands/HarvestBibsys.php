@@ -168,7 +168,9 @@ class HarvestBibsys extends Command {
 				Log::info('Got resumption token: ' . $resumptionToken);
 				file_put_contents(storage_path('resumption_token'), $resumptionToken); 
 			}
-			$this->progress->setCurrent($records->key());
+			if ($records->key() > $this->progress->getStep() && $records->key() <= $this->progress->getMaxSteps()) {
+				$this->progress->setCurrent($records->key());
+			}
 
 
 			while (true) {
@@ -176,10 +178,10 @@ class HarvestBibsys extends Command {
 				try {
 					$records->next();
 					break 1;
-				} catch (\Scriptotek\Oai\BadResponseError $e) {
+				} catch (Scriptotek\Oai\BadRequestError $e) {
 					// OAI-PMH servers really shouldn't throw
 					// random errors now and then, but some do...
-					$attempt += 1;
+					$attempt++;
 					if ($attempt > 50) {
 						throw $e;
 					}
