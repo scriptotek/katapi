@@ -270,9 +270,9 @@ foreach ($doc->subjects as $subj) {
 
       function fetch(id) {
         console.log('Fetching volumes for: ' + id);
-        LocalApi.search('bs.serieobjektid=' + id).then(function(docs) {
-          console.log(docs);
-          scope.volumes = docs;
+        LocalApi.search('bs.serieobjektid=' + id).then(function(results) {
+          console.log(results);
+          scope.volumes = results.documents;
         });
       }
 
@@ -305,10 +305,10 @@ foreach ($doc->subjects as $subj) {
       function fetch(id, part) {
         scope.bibsys_id = id;
         console.log('Fetching work title');
-        LocalApi.search('bs.objektid=' + id).then(function(docs) {
-          console.log(docs);
-          console.log('setting ' + scope.title);
-          scope.title = docs[0].title;
+        LocalApi.search('bs.objektid=' + id).then(function(results) {
+          console.log(results);
+          // console.log('setting ' + scope.title);
+          scope.title = results.documents[0].title;
           scope.part = part;
         });
       }
