@@ -10,20 +10,15 @@ class DocumentsController extends BaseController {
 
 	protected $query = 'rec.identifier="{{id}}"';
 
-	public function getIndex()
-	{
-		// show search box?
-		return View::make('hello');
-	}
-
 	/**
-	 * @api {get} /documents/show/:id Request Document information
-	 * @apiName GetDocument
+	 * @api {get} /documents/show/:id Request single document
+	 * @apiName getShow
 	 * @apiGroup Document
 	 *
-	 * @apiParam {Number} ID of the document. Can be Bibsys dokid, objektid or knyttid, or ISBN.
+	 * @apiParam {Number} id ID of the document. Can be Bibsys dokid, objektid or knyttid, or ISBN.
+	 * @apiParam {String} [format=json] Format
 	 * @apiExample Example usage:
-	 * curl -i http://localhost/documents/show/132038137
+	 * curl -i http://katapi.biblionaut.net/documents/show/132038137
 	 *
 	 * @apiSuccess {String} served_by Indicates if the Document was found in, and retrieved from the local database ('local_db'),
 	 *                                or fetched directly from SRU ('bibsys_sru')
@@ -34,7 +29,23 @@ class DocumentsController extends BaseController {
 	 * @apiSuccess {String} authors.name Author/creator name
 	 * @apiSuccess {String} authors.role E.g. 'main', 'aut', 'edt', 'added', ...
 	 * @apiSuccess {String} authors.authority Bibsys authority identifier
-	 *
+	 * @apiSuccessExample {json} Success-Response:
+	 *     HTTP/1.1 200 OK
+	 *     {
+     *       "served_by": "bibsys_sru",
+     *       "bibsys_id": "050117416",
+     *       "material": "Book",
+     *       "electronic": false,
+     *       "agency": "NO-TrBIB",
+     *       "record_modified": "2014-11-05 10:54:51",
+     *       "record_created": "2014-11-05 00:00:00",
+     *       "is_series": false,
+     *       "is_multivolume": false,
+     *       "catalogingRules": "katreg",
+     *       "title": "Scattering : scattering and inverse scattering in pure and applied science",
+     *       "part_no": "Vol. 1",
+     *       ...
+     *     }
 	 */
 	public function getId($id)
 	{
@@ -129,20 +140,71 @@ class DocumentsController extends BaseController {
 
 	}
 
-	public function getSearch()
+	/**
+	 * @api {get} /documents Search for documents
+	 * @apiName getIndex
+	 * @apiGroup Document
+	 *
+	 * @apiParam {String} [q] Query
+	 * @apiParam {String} [format=json] Format
+	 * @apiExample Example usage:
+	 * curl -i http://katapi.biblionaut.net/documents?q=Hello
+	 *
+	 * @apiSuccess {String} served_by Indicates if the Document was found in, and retrieved from the local database ('local_db'),
+	 *                                or fetched directly from SRU ('bibsys_sru')
+	 * @apiSuccess {String} bibsys_id The Bibsys 'objektid'
+	 * @apiSuccess {String} material The material type. TODO: Document all the possible values
+	 * @apiSuccess {Boolean} electronic Whether the document is electronic (true) or physical (false)
+	 * @apiSuccess {Object[]} authors List of authors/creators
+	 * @apiSuccess {String} authors.name Author/creator name
+	 * @apiSuccess {String} authors.role E.g. 'main', 'aut', 'edt', 'added', ...
+	 * @apiSuccess {String} authors.authority Bibsys authority identifier
+	 * @apiSuccessExample {json} Success-Response:
+	 *     HTTP/1.1 200 OK
+	 *     {
+	 *       "numberOfRecords": 10,
+	 *       "nextRecordPosition": null,
+	 *       "documents": [
+     *          {
+     *            "bibsys_id": "940535580",
+     *            "material": "Book"
+     *            "title": "Reflections on the Higgs system",
+     *            ...
+     *          },
+     *          {
+     *            "bibsys_id": "960793933",
+     *            "material": "Book"
+     *            "title": "Search for the standard model Higgs boson at LEP200 with the DELPHI detector",
+     *            ...
+     *          },
+     *          ...
+	 *       ]
+	 *     }
+	 * @apiErrorExample {json} Error-Response:
+	 *     HTTP/1.1 200 OK
+	 *     {
+	 *       "numberOfRecords": 0,
+	 *       "nextRecordPosition": null,
+	 *       "documents": []
+	 *     }
+	 *
+	 *
+	 */
+	public function getIndex()
 	{
 
-		// TODO
-		if (!isset($_GET['query'])) {
+		// TODO: Some default action, show search box?
+		if (!isset($_GET['q'])) {
 			App::abort(404, 'No query given.');
 		}
-		$cql = Input::get('query');
+		$cql = Input::get('q');
 
 		$nextRecordPosition = intval(Input::get('continue', '1'));
+		$count = intval(Input::get('count', '25'));
 
 		Clockwork::startEvent('fetchRecords', 'Fetching records from BIBSYS');
 		$bs = new BibsysService;
-		$res = $bs->search($cql, $nextRecordPosition, 25);
+		$res = $bs->search($cql, $nextRecordPosition, $count);
 
 		Clockwork::endEvent('fetchRecords');
 

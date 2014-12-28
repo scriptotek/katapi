@@ -35,16 +35,11 @@ Route::get('documents/show/{id}', 'DocumentsController@getId')
 // 	return Redirect::action('BibsysController@getShow', $id);
 // });
 
-# /documents/search
-Route::get('documents/search', 'DocumentsController@getSearch');
+# /documents
+Route::get('documents', 'DocumentsController@getIndex');
 
 # /libraries/show
 Route::get('libraries/show/{id}', 'LibrariesController@getShow');
-
-
-/*Route::get('bibsys/search', function() {
-	return Redirect::action('BibsysController@getSearch');
-});*/
 
 # /covers/show/:id
 Route::get('covers/show/{id}', 'CoversController@getShow');

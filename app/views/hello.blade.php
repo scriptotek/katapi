@@ -2,6 +2,12 @@
 
 @section('content')
 
+<p><strong>
+
+DEPRECATED. Use public/app/templates/welcome.html instead.
+
+</strong></p>
+
 <p>
 	Library metadata transducer. API is <em>not</em> stable. <a href="https://github.com/scriptotek/katapi">More info</a>
 </p>
@@ -53,7 +59,7 @@
     </li>
 </ul>
 
-<h2>GET /subjects/<span class="var">:vocabulary</span>/<span class="var">:term</span></h2>
+<h2>GET /subjects/show/<span class="var">:vocabulary</span>/<span class="var">:term</span></h2>
 <p>
 	Returns a single Subject, specified by a <span class="var">:vocabulary</span> (an LC subject source code) 
 	and <span class="var">:term</span> (an index term).
@@ -67,11 +73,11 @@
 </ul>
 
 <?php
-	$example1 = URL::action('DocumentsController@getSearch', array(
-		'query' => 'bs.serieobjektid=042457270'));
+	$example1 = URL::action('DocumentsController@getIndex', array(
+		'q' => 'bs.serieobjektid=042457270'));
 ?>
-<h2>GET /documents/search?query=<span class="var">:query</span></h2>
-where <span class="var">:query</span> is a html encoded CQL query.
+<h2>GET /documents?q=<span class="var">:query</span></h2>
+where <span class="var">:q</span> is a html encoded CQL query.
 <p>
 	<em>Examples:</em>
 </p>
@@ -85,7 +91,7 @@ where <span class="var">:query</span> is a html encoded CQL query.
 <h2>GET /authors/show/:id</h2>
 …
 
-<h2>GET /authors/search</h2>
+<h2>GET /authors</h2>
 …
 
 <h2>GET /covers/show/:id</h2>

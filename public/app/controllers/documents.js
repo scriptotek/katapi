@@ -105,10 +105,10 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
 
 })
 
-.controller('DocumentsSearchController', ['$scope', '$location', 'LocalApi', function($scope, $location, LocalApi) {
-  console.log('[DocumentsSearchController] Hello');
+.controller('DocumentsController', ['$scope', '$location', 'LocalApi', function($scope, $location, LocalApi) {
+  console.log('[DocumentsController] Hello');
 
-  $scope.query = $location.search().query;
+  $scope.query = $location.search().q;
 
   $scope.show = { 
     indexing: false,
@@ -126,7 +126,7 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
     }
     $scope.busy = true;
     LocalApi.search(query, nextRecordPosition).then(function(results) {
-      console.log('[DocumentsSearchController] Server returned ' + results.documents.length + ' results');
+      console.log('[DocumentsController] Server returned ' + results.documents.length + ' results');
       // console.log(results);
       Array.prototype.push.apply($scope.docs, results.documents);
       $scope.numberOfRecords = results.numberOfRecords;
@@ -158,8 +158,8 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
   }
 
   $scope.search = function() {
-    $location.path('/documents/search').search({
-      'query': $scope.query,
+    $location.path('/documents').search({
+      'q': $scope.query,
       'continue': $scope.nextRecordPosition,
       'show': showToString()
     });
@@ -173,17 +173,17 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
 
   $scope.moreResults = function() {
     if ($scope.nextRecordPosition) {
-      console.log('[DocumentsSearchController] Fetch more results');
+      console.log('[DocumentsController] Fetch more results');
       getSearch($scope.query, $scope.nextRecordPosition);
     } else {
-      console.log('[DocumentsSearchController] Reached end of list');
+      console.log('[DocumentsController] Reached end of list');
     }
   };
 
 }])
 
-.controller('DocumentsController', ['$scope', 'docs', function($scope, docs) {
-  console.log('Hello from DocumentsController');
+.controller('DocumentController', ['$scope', 'docs', function($scope, docs) {
+  console.log('Hello from DocumentController');
   console.log('We got ' + docs.length + ' documents');
 
 /*

@@ -33,11 +33,11 @@ angular.module('katapi.api', ['katapi.documents'])
     var deferred = $q.defer();
 
     $http({
-      url: '/documents/search',
+      url: '/documents',
       method: 'GET',
       cache: true,
       params: {
-        'query': query,
+        'q': query,
         'continue': nextRecordPosition,
         'format': 'json'
       }

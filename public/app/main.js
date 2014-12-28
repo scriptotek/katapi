@@ -9,7 +9,7 @@ angular.module('katapi', ['ngRoute', 'infinite-scroll', 'katapi.api', 'katapi.we
     .when('/', {templateUrl: '/app/templates/welcome.html', controller: 'WelcomeController'})
     .when('/documents/show/:id', {
       templateUrl: '/app/templates/documents/show.html',
-      controller: 'DocumentsController',
+      controller: 'DocumentController',
       // http://stackoverflow.com/a/19213892
       resolve: {
         // An optional map of dependencies which should be injected into the controller. 
@@ -23,7 +23,7 @@ angular.module('katapi', ['ngRoute', 'infinite-scroll', 'katapi.api', 'katapi.we
     })
     .when('/documents/compare/:id1/:id2', {
       templateUrl: '/app/templates/documents/compare.html',
-      controller: 'DocumentsController',
+      controller: 'DocumentController',
       // http://stackoverflow.com/a/19213892
       resolve: {
         // An optional map of dependencies which should be injected into the controller. 
@@ -35,9 +35,9 @@ angular.module('katapi', ['ngRoute', 'infinite-scroll', 'katapi.api', 'katapi.we
         }]
       }
     })
-    .when('/documents/search', {
+    .when('/documents', {
       templateUrl: '/app/templates/documents/search.html',
-      controller: 'DocumentsSearchController'
+      controller: 'DocumentsController'
     })
     /*.when('/documents/compare/:id1/:id2', {
       templateUrl: '/app/templates/documents/compare.html',
