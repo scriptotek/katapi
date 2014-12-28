@@ -65,7 +65,7 @@ class Document extends Eloquent {
 		$links = array(
 			array(
 				'rel' => 'self',
-				'uri' => URL::current()
+				'uri' => URL::action('DocumentsController@getId', array($this->bibsys_id)),
 			)
 		);
 		$this->links = $links;
