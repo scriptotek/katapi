@@ -1,0 +1,12 @@
+{
+  "name": "katapi",
+  "version": "0.1.0",
+  "description": "library metadata api",
+  "title": "katapi documentation",
+  "url" : "http://katapi.biblionaut.net",
+  "sampleUrl" : "http://katapi.biblionaut.net",
+  "template": {
+  	"withCompare": false,
+    "withGenerator": true
+  }
+}
