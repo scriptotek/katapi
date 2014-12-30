@@ -54,7 +54,7 @@ return array(
 	|
 	*/
 
-	'from' => array('address' => null, 'name' => null),
+	'from' => array('address' => 'postmaster@biblionaut.net', 'name' => 'postmaster@biblionaut.net'),
 
 	/*
 	|--------------------------------------------------------------------------
@@ -80,7 +80,7 @@ return array(
 	|
 	*/
 
-	'username' => null,
+	'username' => $_ENV['SMTP_USER'],
 
 	/*
 	|--------------------------------------------------------------------------
@@ -93,7 +93,7 @@ return array(
 	|
 	*/
 
-	'password' => null,
+	'password' => $_ENV['SMTP_PASS'],
 
 	/*
 	|--------------------------------------------------------------------------
@@ -120,5 +120,15 @@ return array(
 	*/
 
 	'pretend' => false,
+
+	/*
+	|--------------------------------------------------------------------------
+	| Admin
+	|--------------------------------------------------------------------------
+	|
+	| Address to send alerts to
+	*/
+
+	'admin' => 'danmichaelo@gmail.com',
 
 );
