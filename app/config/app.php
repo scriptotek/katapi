@@ -26,7 +26,7 @@ return array(
 	|
 	*/
 
-	'url' => 'http://localhost',
+	'url' => $_ENV['APP_URL'],
 
 	/*
 	|--------------------------------------------------------------------------
@@ -65,8 +65,7 @@ return array(
 	|
 	*/
 
-    'key' => 'YourSecretKey!!!',
-
+    'key' => $_ENV['ENCRYPTION_KEY'],
     'cipher' => MCRYPT_RIJNDAEL_128,
 
 	/*

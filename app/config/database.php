@@ -141,8 +141,8 @@ return array(
 	'papertrail' => array(
 
 		'enable' => false,
-		'host' => 'logsX.papertrailapp.com',
-		'port' => 9999,
+		'host' => $_ENV['PAPERTRAIL_HOST'],
+		'port' => $_ENV['PAPERTRAIL_PORT'],
 
 	),
 
