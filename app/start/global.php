@@ -1,5 +1,9 @@
 <?php
 
+use Monolog\Logger;
+use Monolog\Formatter\LineFormatter;
+use Monolog\Handler\SyslogUdpHandler;
+
 /*
 |--------------------------------------------------------------------------
 | Register The Laravel Class Loader
@@ -32,6 +36,28 @@ ClassLoader::addDirectories(array(
 */
 
 Log::useFiles(storage_path().'/logs/laravel.log');
+
+
+if (Config::get('database.papertrail.enable')) {
+
+	$logger = Log::getMonolog();
+
+	// Set the format
+	$dateFormat = 'Y-m-d\TH:i:s\Z';
+	$output = '%datetime% localhost katapi - - - %level_name%: %message%';
+	$formatter = new LineFormatter($output, $dateFormat);
+
+	// Setup the logger
+	// $logger = new Logger('my_logger');
+	$syslogHandler = new SyslogUdpHandler(Config::get('database.papertrail.host'), Config::get('database.papertrail.port'));
+	$syslogHandler->setFormatter($formatter);
+	$logger->pushHandler($syslogHandler);
+
+	// Use the new logger
+	// $logger->addInfo('Monolog test');
+
+}
+
 
 /*
 |--------------------------------------------------------------------------
