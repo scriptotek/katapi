@@ -212,11 +212,42 @@ foreach ($doc->subjects as $subj) {
 
   // Bygges ut etterhvert. Autoritativ liste finnes på
   // http://www.bibsys.no/files/pdf/andre_dokumenter/relator_codes.pdf
+  
   $scope.roles = {
-    aut: 'forfatter',
-    aui: 'forfatter av forord',
-    aft: 'forfatter av etterord',
-    edt: 'redaktør',
+    en: {
+      adp: 'adapter',
+      aut: 'author',
+      aui: 'author of introduction',
+      aft: 'author of afterword, colophon, etc.',
+      bjd: 'bookjacket designer',
+      det: 'dedicatee',
+      dub: 'dubious author',
+      edt: 'editor',
+      ill: 'illustrator',
+      ivr: 'interviewer',
+      ive: 'interviewee',
+      pbd: 'publishing director',
+      pbl: 'publisher',
+      prt: 'printer',
+      trl: 'translator'
+    },
+    nb: {
+      adp: 'bearbeider',
+      aut: 'forfatter',
+      aui: 'forfatter av forord',
+      aft: 'forfatter av etterord',
+      bjd: 'omslagsdesigner',
+      det: 'person tilegnet',
+      dub: 'usikkert forfatterskap',
+      edt: 'redaktør',
+      ill: 'illustratør',
+      ivr: 'intervjuer',
+      ive: 'intervjuobjekt',
+      pbd: 'forlagsredaktør',
+      pbl: 'forlag/utgiver',
+      prt: 'trykker',
+      trl: 'oversetter'
+    }
   };
 
   // http://www.loc.gov/standards/sourcelist/subject.html

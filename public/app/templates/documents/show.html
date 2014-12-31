@@ -85,7 +85,7 @@
 						<li ng-repeat="author in doc.authors">
 							<a ng-show="author.bibsys_identifier" ng-href="http://tools.wmflabs.org/bsaut/show/{{ author.bibsys_identifier }}">{{ author.name }}</a>
 							<span ng-show="!author.bibsys_identifier">{{ author.name }}</span>
-							({{ roles[author.role] || author.role }})
+							({{ roles.nb[author.role] || author.role }})
 						</li>
 					</ul>
 				</td>
