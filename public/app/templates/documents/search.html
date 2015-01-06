@@ -39,10 +39,11 @@
     <li ng-repeat="doc in docs">
       <i class="fa-li fa fa-angle-double-right"></i>
       <h3>
-        <a href="/documents/show/{{ doc.bibsys_id }}">{{ doc.title }}{{
-          doc.part_no ? ' – ' + doc.part_no : '' 
+        <a ng-href="/documents/{{ doc._id }}">{{ doc.bibliographic.title }}{{
+          doc.bibliographic.part_no ? ' – ' + doc.bibliographic.part_no : '' 
         }}</a>{{
-          doc.year ? ' (' + doc.year + ')' : ''
+          (doc.bibliographic.edition || doc.bibliographic.year) ? ' (' + (doc.bibliographic.edition + ' ' + doc.bibliographic.year).trim() + ')' : ''
+
         }}
       </h3>
 
@@ -57,7 +58,7 @@
           </span>
           <ul>
             <li ng-repeat="itm in items">
-              <a class="subject" href="{{ itm.url }}"> {{ itm.term }}</a>
+              <a class="subject" ng-href="{{ itm.link }}"> {{ itm.term }}</a>
               <span style="color:#888;" ng-show="itm.extras">
                 (<!--{{ implode(', ', $itm['extras']) }}-->)
               </span>
@@ -72,48 +73,48 @@
 
       <ul class="seriesAndNotes">
 
-          <li ng-repeat="series in doc.series" ng-show="show.series">
+          <li ng-repeat="series in doc.bibliographic.series" ng-show="show.series">
                   <i class="fa fa-angle-double-up"></i> 
                   Del av serien: {{series.title}}
                   <span ng-show="series.volume">
                     (bind/heftenr. {{series.volume}})
                   </span>
-                  <span ng-show="doc.series.issn">
-                    (ISSN {{doc.series.issn}})
+                  <span ng-show="doc.bibliographic.series.issn">
+                    (ISSN {{doc.bibliographic.series.issn}})
                   </span>
               </li>
 
-              <li ng-show="show.series && doc.part_of">
+              <li ng-show="show.series && doc.bibliographic.part_of">
                   <i class="fa fa-angle-double-up"></i> 
-                  Del av flerbindsverket: {{doc.part_of.title}}
-                  <span ng-show="doc.part_of.volume">
-                    (bind/heftenr. {{doc.part_of.volume}})
+                  Del av flerbindsverket: {{doc.bibliographic.part_of.title}}
+                  <span ng-show="doc.bibliographic.part_of.volume">
+                    (bind/heftenr. {{doc.bibliographic.part_of.volume}})
                   </span>
               </li>
 
-              <li ng-show="show.series && doc.preceding">
+              <li ng-show="show.series && doc.bibliographic.preceding">
                 <i class="fa fa-angle-double-left"></i> 
-                {{doc.preceding.note}}
-                <span ng-show="!doc.preceding.note">
-                  {{doc.preceding.relationship_type}}
-                  <span ng-repeat="itm in doc.preceding.items">
+                {{doc.bibliographic.preceding.note}}
+                <span ng-show="!doc.bibliographic.preceding.note">
+                  {{doc.bibliographic.preceding.relationship_type}}
+                  <span ng-repeat="itm in doc.bibliographic.preceding.items">
                     {{itm.id}} {{itm.related_parts}},
                   </span>
                 </span>
               </li>
 
-              <li ng-show="show.series && doc.succeeding">
+              <li ng-show="show.series && doc.bibliographic.succeeding">
                 <i class="fa fa-angle-double-right"></i> 
-                {{doc.succeeding.note}}
-                <span ng-show="!doc.succeeding.note">
-                  {{doc.succeeding.relationship_type}}
-                  <span ng-repeat="itm in doc.succeeding.items">
+                {{doc.bibliographic.succeeding.note}}
+                <span ng-show="!doc.bibliographic.succeeding.note">
+                  {{doc.bibliographic.succeeding.relationship_type}}
+                  <span ng-repeat="itm in doc.bibliographic.succeeding.items">
                     {{itm.id}} {{itm.related_parts}},
                   </span>
                 </span>
               </li>
 
-              <li ng-repeat="note in doc.notes" ng-show="show.notes">
+              <li ng-repeat="note in doc.bibliographic.notes" ng-show="show.notes">
                 <i class="fa fa-comment-o"></i> {{note}}
               </li>
 
@@ -123,18 +124,16 @@
                 <li ng-repeat="holding in doc.holdings">
                   <i class="fa fa-hand-o-right"></i> 
 
-                  {{holding.id}}:
-
                   <span class="collection">{{holding.shelvinglocation}}</span>
                   {{holding.callcode}}
                   <span ng-show="holding.circulation_status!=='Available'">(<strong>{{holding.circulation_status}}</strong>)</span>
                   <span ng-repeat="note in holding.public_notes">
                       <i class="fa fa-comment-o"></i> {{note}}
                   </span>
-                  <span ng-repeat="note in holding.nonpublic_notes">
+<!--                   <span ng-repeat="note in holding.nonpublic_notes">
                       <i class="fa fa-comment-o"></i> {{note}}
                   </span>
-                  <span ng-show="holding.holdings">
+ -->              <span ng-show="holding.holdings">
                       <i class="fa fa-folder-open-o"></i> {{holding.holdings}}
                   </span>
 

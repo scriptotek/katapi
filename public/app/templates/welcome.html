@@ -1,77 +1,126 @@
 
 <p>
-	Library metadata transducer. API is <em>not</em> stable. <a href="https://github.com/scriptotek/katapi">More info</a>
+	Library metadata API. Spec is <em>not</em> stable. <a href="https://github.com/scriptotek/katapi">More info</a>
 </p>
 <p>
 	Use <tt>Accept: application/json</tt> (or add <tt>?format=json</tt>) to get the JSON representation of a resource.
 	More formats might be available in the future. HTML representations are quite limited currently.
 </p>
 
-<h2>GET /documents/show/<span class="var">:id</span></h2>
+<h2><a name="document">Document</a></h2>
 <p>
-	Returns a single Document (book, journal, media), specified by the <span class="var">:id</span>
-	parameter.
-	Holdings information (information about specific copies of the document) will also be
-	embedded within the document.
+	A <em>document</em> is some entity open to bibliographic description. Documents include
+	books, journals, media, etc. In addition to bibliographic information, documents
+	embed <em>holdings</em> information describing physical copies of the document.
+</p>
+
+<h3><tt>GET /documents/<span class="var">:id</span></tt></h3>
+<p>
+	Returns a single document by its locally unique <span class="var">:id</span> parameter.
+	If not found, a 404 response is returned.
+</p>
+<p>
+	Examples:	
+</p>
+<ul>
+	<li>
+		Get the document with <tt><span class="var">:id</span>=54a9c9e58b70d51c2a0041d9</tt><br>
+		<a href="/documents/54a9c9e58b70d51c2a0041d9">/documents/54a9c9e58b70d51c2a0041d9</a>		
+	</li>
+    <li>
+		A document demonstrating complex journal succeeding entry:<br>
+        <a href="/documents/54aaa03c8b70d51c2a0041e5">/documents/54aaa03c8b70d51c2a0041e5</a>
+    </li>
+    <li>
+        A document demonstrating relator codes for creators:<br>
+        <a href="/documents/54aaa87f8b70d51c2a0043d4">/documents/54aaa87f8b70d51c2a0043d4</a>
+    </li>
+</ul>
+
+<h3><tt>GET /documents?q=<span class="var">:query</span></tt></h3>
+<p>
+	Returns a list of (zero or more) documents, usually filtered by some query.
+	The query is made up of one or more fields.
 </p>
 
 <em>Examples:</em>
 <ul>
 	<li>
-		<span class="var">:id</span> is a <em>BIBSYS objektid</em>:<br>
-		<a href="/documents/show/132038137">/documents/show/132038137</a>		
+		<strong><tt>id</tt></strong> : Query by <em>some</em> identifier, such as 
+		<ul>
+		    <li>
+		    	<em>BIBSYS objektid</em>:<br>
+				<a href="/documents?q=id:132038137">/documents?q=id:132038137</a>
+		    </li>
+		    <li>
+		    	<em>BIBSYS dokid</em>:<br>
+				<a href="/documents?q=id:12k189510">/documents?q=id:12k189510</a>	
+		    </li>
+		    <li>
+		    	<em>BIBSYS knyttid</em>:<br>
+				<a href="/documents?q=id:050076NA0">/documents?q=id:050076NA0</a>
+		    </li>
+		    <li>
+		    	<em>ISBN</em> (ISBN10 or 13, hyphens optional): <br>
+				<a href="/documents?q=id:1-107-01395-X">/documents?q=id:1-107-01395-X</a>
+		    </li>
+		</ul>
 	</li>
 	<li>
-		<span class="var">:id</span> is a <em>BIBSYS dokid</em>:<br>
-		<a href="/documents/show/12k189510">/documents/show/12k189510</a>		
-    </li>
-	<li>
-		<span class="var">:id</span> is a <em>BIBSYS knyttid</em>:<br>
-		<a href="/documents/show/050076NA0">/documents/show/050076NA0</a>
-    </li>
-    <li>
-		<span class="var">:id</span> is an <em>ISBN</em> (ISBN10 or 13, hyphens optional): <br>
-		<a href="/documents/show/1-107-01395-X">/documents/show/1-107-01395-X</a>
-    </li>
-    <li>
-		Complex journal succeeding entry:<br>
-        <a href="/documents/show/841188564">/documents/show/841188564</a>
-    </li>
-    <li>
-        Relator codes for authors:<br>
-        <a href="/documents/show/143806734">/documents/show/143806734</a>
-    </li>
+		CQL query: (syntax subject to change)
+		<ul>
+		    <li>
+		    	Return the volumes of a multi volume work:<br>
+				<a href="/documents?q=bs.serieobjektid%3D042457270">/documents?q=bs.serieobjektid%3D042457270</a>
+		    </li>
+		</ul>
+	</li>
 </ul>
 
-<h2>GET /documents?q=<span class="var">:query</span></h2>
-where <span class="var">:query</span> is a html encoded CQL query.
+
+
+<h2><a name="subject">Subject</a></h2>
 <p>
-	<em>Examples:</em>
+	A <em>subject</em> is some entity that is part of a controlled subject headings vocabulary.
+	A subject can be uniquely identified by it's identifier or the combination
+	of an index term and a vocabulary name, see examples below.
+	Subject resources embed document usage information.
+</p>
+<h3><tt>GET /subjects/<span class="var">:id</span></tt></h3>
+
+<p>
+	Returns a single subject by its locally unique <span class="var">:id</span> parameter. If not found, a 404 response is returned.
+</p>
+<p>
+	Examples:
 </p>
 <ul>
 	<li>
-		Return the volumes of a multi volume work:<br>
-		<a href="/documents?q=bs.serieobjektid%3D042457270">/documents?q=bs.serieobjektid%3D042457270</a>
+		x:<br>
+		<a href="/subjects/x">/subjects/x</a>		
 	</li>
 </ul>
 
-<h2>GET /subjects/<span class="var">:vocabulary</span>/<span class="var">:term</span></h2>
+<h3><tt>GET /subjects?q=<span class="var">:query</span></tt></h3>
 <p>
-	Returns a single Subject, specified by a <span class="var">:vocabulary</span> (an LC subject source code) 
-	and <span class="var">:term</span> (an index term).
-	Term usage is embedded in the returned object.
+	Returns a list of (zero or more) subject headings, usually filtered by some query.
+	The query is made up of one or more fields.
 </p>
+
+<em>Examples:</em>
 <ul>
 	<li>
-		The term "Steganografi" in the vocabulary "noubomn" (Realfagstermer):<br>
-		<a href="/subjects/noubomn/Steganografi">/subjects/noubomn/Steganografi</a>		
+		The term "Steganografi" in the vocabulary "Realfagstermer", as identified
+		by the LC subject source code "noubomn":<br>
+		<a href="/subjects?q=vocab:noubomn+term:Steganografi">/subjects?q=vocabulary:noubomn+term:Steganografi</a>		
 	</li>
 </ul>
 
-<h2>GET /authors/show/:id</h2>
+
+<h2>GET /creators/show/:id</h2>
 …
 
-<h2>GET /authors</h2>
+<h2>GET /creators</h2>
 …
 
 <h2>GET /covers/show/:id</h2>

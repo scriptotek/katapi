@@ -2,7 +2,9 @@
 
 class BaseController extends Controller {
 
-	/**
+    protected $validExtensions = array('.json', '.html');
+
+    /**
 	 * Setup the layout used by the controller.
 	 *
 	 * @return void
@@ -15,7 +17,11 @@ class BaseController extends Controller {
 		}
 	}
 
-	public function getRequestFormat($format = null)
+    /**
+     * @param $format
+     * @return null|string
+     */
+    public function getRequestFormat($format = null)
 	{
 		$m = preg_match('#.*/.*?\.([a-z.]{2,4})$#', Request::path(), $matches);
 		if ($m) {
@@ -33,16 +39,25 @@ class BaseController extends Controller {
 	    }
 	}
 
-	public function negotiateContentType($controller, $routeParams)
+    protected function getFormat($value) {
+        $ext = substr($value, strrpos($value, '.'));
+        if (in_array($ext, $this->validExtensions)) {
+            $value = substr($value, 0, strlen($value) - strlen($ext));
+            return array($value, $ext);
+        }
+        return array($value, null);
+    }
+
+	public function negotiateContentType($controller, $routeParams, $extendable)
 	{
 		switch ($this->getRequestFormat()) {
 
 			case 'json':
-				$routeParams['format'] = 'json';
+				$routeParams[$extendable] .= '.json';
 				break;
 
 			case 'html':
-				$routeParams['format'] = 'html';
+				$routeParams[$extendable] .= '.html';
 				break;
 
 			case 'rdf.xml':

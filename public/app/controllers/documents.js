@@ -16,29 +16,32 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
     postprocess: function(doc) {
       // console.log('[DocumentUtils] Postprocessing document');
       var q = {};
+
+      console.log(doc);
+
       if (doc.subjects) {
         doc.subjects.forEach(function(subj) {
           if (!q[subj.vocabulary]) q[subj.vocabulary] = [];
           q[subj.vocabulary].push({
-            url: subj.uri,
+            link: subj.link,
             term: subj.indexTerm,
             extras: []
           });
         });
       }
-      if (doc.classes) {
-        doc.classes.forEach(function(subj) {
+      if (doc.classifications) {
+        doc.classifications.forEach(function(subj) {
           if (!q[subj.system]) q[subj.system] = [];
           q[subj.system].push({
-            url: subj.uri,
+            link: subj.link,
             term: subj.number,
             edition: subj.edition,
             extras: []
           });
         });
       }
-      if (doc.isbns) {
-        doc.isbns = unique(doc.isbns.map(ISBN.hyphenate));
+      if (doc.bibliographic.isbns) {
+        doc.bibliographic.isbns = unique(doc.bibliographic.isbns.map(ISBN.hyphenate));
       }
       doc.subjectsAndClasses = q;
 
@@ -49,7 +52,7 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
 }])
 
 .factory('Document', ['$resource', 'DocumentUtils', function ($resource, DocumentUtils) {
-  return $resource('/documents/show/:id.json', {id: '@id'}, {
+  return $resource('/documents/:id.json', {id: '@id'}, {
     get: {
       method: 'GET',
       cache: true,
@@ -62,13 +65,12 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
   });
 }])
 
-
-.factory('Documents', function ($q, Document) {
+.factory('Documents', ['$q', 'Document', function ($q, Document) {
 
   return {
-    get: function(ids) {
+    get: function(items) {
       var deferred = $q.defer(),
-          waitingFor = ids.length,
+          waitingFor = items.length,
           docs = [];
 
       function done() {
@@ -80,12 +82,12 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
         }
       }
 
-      function gotDocument(doc) {
+      function onSuccess(doc) {
         docs.push(doc);
         done();
       }
 
-      function loadFailed(err) {
+      function onFail(err) {
         var msg = 'Load failed';
         if (err.data && err.data.error && err.data.error.message) {
           msg = err.data.error.message;
@@ -95,15 +97,15 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
       }
 
       console.log('Waiting for ' + waitingFor +  ' docs to load');
-      ids.forEach(function(id) {
-        Document.get({ id: id }, gotDocument, loadFailed);
+      items.forEach(function(item) {
+        Document.get(item, onSuccess, onFail);
       });
 
       return deferred.promise;    
     }
   };
 
-})
+}])
 
 .controller('DocumentsController', ['$scope', '$location', 'LocalApi', function($scope, $location, LocalApi) {
   console.log('[DocumentsController] Hello');
@@ -186,30 +188,6 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
   console.log('Hello from DocumentController');
   console.log('We got ' + docs.length + ' documents');
 
-/*
-
-$subjectsAndClasses = [];
-
-foreach ($doc->subjects as $subj) {
-
-  if (count($subjectsAndClasses) == 0 || $subjectsAndClasses[count($subjectsAndClasses) - 1]['code'] != $subj['vocabulary']) {
-    $subjectsAndClasses[] = array(
-      'code' => $subj['vocabulary'],
-      'name' => array_get(Subject::$vocabularies, $subj['vocabulary'], $subj['vocabulary']),
-      'items' => array(),
-    );
-  }
-
-  $el = array(
-    'url' => URL::to($subj['uri']),
-    'term' => isset($subj['indexTerm']) ? $subj['indexTerm'] : 'n/a',
-    'extras' => array(),
-  );
-
-  $subjectsAndClasses[count($subjectsAndClasses) - 1]['items'][] = $el;
-}
-*/
-
   // Bygges ut etterhvert. Autoritativ liste finnes på
   // http://www.bibsys.no/files/pdf/andre_dokumenter/relator_codes.pdf
   
@@ -221,6 +199,7 @@ foreach ($doc->subjects as $subj) {
       aft: 'author of afterword, colophon, etc.',
       bjd: 'bookjacket designer',
       det: 'dedicatee',
+      dgg: 'degree grantor',
       dub: 'dubious author',
       edt: 'editor',
       ill: 'illustrator',
@@ -238,6 +217,7 @@ foreach ($doc->subjects as $subj) {
       aft: 'forfatter av etterord',
       bjd: 'omslagsdesigner',
       det: 'person tilegnet',
+      dgg: 'eksamenssted',
       dub: 'usikkert forfatterskap',
       edt: 'redaktør',
       ill: 'illustratør',
@@ -271,6 +251,7 @@ foreach ($doc->subjects as $subj) {
     'oosk': 'UBB-klassifikasjon',
     'udc': 'UDC',
     'utk': 'UBO-klassifikasjon',
+    'NO-TrBIB': 'Omtalt'
   };
 
   // http://www.loc.gov/standards/sourcelist/descriptive-conventions.html
@@ -283,6 +264,8 @@ foreach ($doc->subjects as $subj) {
 
   if (docs.length == 1) {
     $scope.doc = docs[0];
+    $scope.biblio = docs[0].bibliographic; // convenience
+    $scope.holdings = docs[0].holdings; // convenience
   }
 
 }])
@@ -316,7 +299,6 @@ foreach ($doc->subjects as $subj) {
     }
   };
 }])
-
 
 .directive('work', ['LocalApi', function (LocalApi) {
   return { 
@@ -403,8 +385,9 @@ foreach ($doc->subjects as $subj) {
         return;
       }
       scope.doc = scope.docs[attrs.itemIndex];
+      scope.biblio = scope.docs[attrs.itemIndex].bibliographic; // convenience
+      scope.holdings = scope.docs[attrs.itemIndex].holdings; // convenience
+      console.log(scope.doc);
     }
   };
 }]);
-
-//})(angular);

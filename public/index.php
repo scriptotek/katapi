@@ -10,10 +10,10 @@ $useLaravel = false;
 
 $ext = isset($_GET['format']) ? $_GET['format'] : '';
 if (empty($ext)) {
-	$ext = strpos($filename, '.') === FALSE ? '' : substr($filename, strpos($filename, '.') + 1);
+	$ext = strrpos($filename, '.') === FALSE ? '' : substr($filename, strrpos($filename, '.') + 1);
 }
 
-if (3<= strlen($ext) && strlen($ext) <= 7) {
+if (3<= strlen($ext) && strlen($ext) <= 7 && $ext != 'html') {
 	//die($ext);
 	$useLaravel = true;
 }

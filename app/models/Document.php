@@ -1,21 +1,145 @@
 <?php
 
-use Jenssegers\Mongodb\Model as Eloquent;
-use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement;
+use Scriptotek\SimpleMarcParser\BibliographicRecord;
+use Scriptotek\SimpleMarcParser\HoldingsRecord;
 use Scriptotek\SimpleMarcParser\Parser;
-use Scriptotek\SimpleMarcParser\ParserException;
+use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement;
 
-class Document extends Eloquent {
+/**
+ * A single document
+ *
+ * @property mixed bibliographic  Basic bibliographic description
+ * @property array holdings  Array of holdings
+ * @property array subjects  Subject headings
+ * @property array classifications  Classification numbers
+ * @property array links
+ */
+class Document extends BaseModel {
 
-	protected $classifications = array();
-
+    /**
+     * The MongoDB collection associated with the model.
+     *
+     * @var string
+     */
 	protected $collection = 'documents';
 
-	protected $appends = array('subjects', 'classes');
-	protected $hidden = array('_id', 'subject_ids', 'created_at', 'modified_at', 'classifications');
-	protected $dates = array('record_created', 'record_modified');
+    /**
+     * Appended, calculated attributes to this model that are not really in the
+     * attributes array, but are run when we need to array or JSON the model.
+     *
+     * @var array
+     */
+	protected $appends = array('link');
 
-	public function getHoldingsAttribute($value)
+    /**
+     * Parse using SimpleMarcParser and separate bibliographic and holdings.
+     *
+     * @param QuiteSimpleXMLElement $data
+     * @return array
+     */
+    protected static function parseRecord(QuiteSimpleXMLElement $data)
+    {
+        $parser = new Parser;
+        $biblio = null;
+        $holdings = array();
+        foreach ($data->xpath('.//marc:record') as $rec) {
+            $parsed = $parser->parse($rec);
+            if ($parsed instanceof BibliographicRecord) {
+                $biblio = $parsed;
+            } elseif ($parsed instanceof HoldingsRecord) {
+                $holdings[] = $parsed;
+            }
+        }
+        return array($biblio, $holdings);
+    }
+
+    /**
+     * Find an existing document (and update it) or create a new one
+     * from a marc:collection dataset
+     *
+     * @param QuiteSimpleXMLElement $data
+     * @return Document
+     */
+    public static function fromRecord(QuiteSimpleXMLElement $data)
+    {
+        // Get BibliographicRecord and array of HoldingsRecord
+        list($biblio, $holdings) = self::parseRecord($data);
+
+        // Find existing Document or create a new one
+        $doc = Document::where('bibliographic.id', '=', $biblio->id)->first();
+        if (is_null($doc)) {
+            Log::info('CREATE document "' . $biblio->id . '"');
+            $doc = new Document;
+        } else {
+            Log::info('UPDATE document "' . $biblio->id . '"');
+        }
+
+        // Update document
+        $doc->bibliographic = $biblio;
+        $doc->holdings = $holdings;
+
+        return $doc;
+    }
+
+    /**
+     * Accessor for the 'bibliographic' attribute
+     *
+     * @param $value
+     * @return array
+     */
+    public function getBibliographicAttribute($value)
+    {
+        if (isset($value['created'])) {
+            $value['created'] = $this->asDateTime($value['created']);
+        }
+        if (isset($value['modified'])) {
+            $value['modified'] = $this->asDateTime($value['modified']);
+        }
+        return $value;
+    }
+
+    /**
+     * Mutator for the 'bibliographic' attribute
+     *
+     * @param $value
+     * @throws Exception
+     */
+    public function setBibliographicAttribute($value)
+    {
+        if ($value instanceof BibliographicRecord) {
+            $value = $value->toArray();
+        } elseif (!is_array($value)) {
+            throw new Exception('Document.bibliographic was given an unknown datatype.');
+        }
+
+        // We maintain subjects and classifications in separate MongoDB collections
+        if (isset($value['subjects'])) {
+            $this->subjects = $value['subjects'];
+            unset($value['subjects']);
+        }
+        if (isset($value['classifications'])) {
+            $this->classifications = $value['classifications'];
+            unset($value['classifications']);
+        }
+
+        // Store native DateTime
+        if (isset($value['created'])) {
+            $value['created'] = $this->fromDateTime($value['created']);
+        }
+        if (isset($value['modified'])) {
+            $value['modified'] = $this->fromDateTime($value['modified']);
+        }
+
+        $this->attributes['bibliographic'] = $value;
+    }
+
+    /**
+     * Accessor for the 'holdings' attribute
+     *
+     * @param $value
+     * @return array
+     */
+    public function getHoldingsAttribute($value)
 	{
 		if (is_null($value)) {
 			return array();
@@ -31,256 +155,335 @@ class Document extends Eloquent {
 		return $value;
 	}
 
-	public function setHoldingsAttribute($value)
+    /**
+     * Mutator for the 'holdings' attribute
+     *
+     * @param $value
+     * @throws Exception
+     */
+    public function setHoldingsAttribute($value)
 	{
-		foreach ($value as $key => $val) {
-			if (isset($val['created'])) {
-				$value[$key]['created'] = $this->fromDateTime($val['created']);
+		foreach ($value as $key => $holding) {
+
+            if ($holding instanceof HoldingsRecord) {
+                $holding = $holding->toArray();
+            } elseif (!is_array($holding)) {
+                throw new Exception('Document.holdings was given an unknown datatype.');
+            }
+
+            // Ignore creation date of record, since Bibsys just set it to the current date
+            if (isset($holding['created'])) {
+                unset($holding['created']);
 			}
 
-			if (isset($val['acquired'])) {
-				$value[$key]['acquired'] = $this->fromDateTime($val['acquired']);
-			}
+			if (isset($holding['acquired'])) {
+				$holding['acquired'] = $this->fromDateTime($holding['acquired']);
+			} else {
+                // Get year from DOKID
+                $yr = 1900 + intval(substr($holding['id'], 0, 2));
+                if ($yr < 1920) {
+                    $yr += 100;
+                }
+                $holding['acquired'] = $this->fromDateTime(strval($yr) . '-01-01 00:00:00');
+            }
+
+            $value[$key] = $holding;
 		}
 		$this->attributes['holdings'] = $value;
 	}
 
-	/**
-     * Convert the model's attributes to an array.
+    /**
+     * Accessor for the 'classifications' attribute
+     *
+     * @param $value
+     * @return array
+     */
+    public function getClassificationsAttribute($value)
+    {
+        if (is_null($value)) return null;
+
+        $result = array();
+        foreach ($value as $reference) {
+            if (isset($reference['assigned'])) {
+                $reference['assigned'] = $this->asDateTime($reference['assigned']);
+            }
+            $reference['internal_id'] = (string) $reference['internal_id'];
+            $result[] = $reference;
+        }
+        return $result;
+    }
+
+    /**
+     * Mutator for the 'classifications' attribute
+     *
+     * @param $value
+     * @throws Exception
+     */
+    public function setClassificationsAttribute($value)
+    {
+        $result = array();
+        foreach ($value as $key => $value) {
+
+            if (!is_array($value)) {
+                throw new Exception('Document.classifications was given an unknown datatype.');
+            }
+
+            if (isset($value['internal_id'])) {
+
+                // Undo the effect of getClassificationsAttribute
+                $value['assigned'] = $this->fromDateTime($value['assigned']);
+                $value['internal_id'] = new MongoId($value['internal_id']);
+                $result[] = $value;
+
+            } else {
+
+                $instance = Classification::where('system', '=', $value['system'])
+                    ->where('number', '=', $value['number'])
+                    ->where('edition', '=', $value['edition'])
+                    ->first();
+
+                if (!$instance) {
+                    Log::info(sprintf('CREATE classification {system: "%s", number: "%s"}', $value['system'], $value['number']));
+                    $instance = new Classification(array(
+                        'system' => $value['system'],
+                        'number' => $value['number'],
+                        'edition' => $value['edition'],
+                    ));
+                    $instance->save();
+                }
+
+                $r = $this->getSubdocumentById('classifications', $instance->id);
+
+                if (is_null($r)) {
+                    $r = array(
+                        'internal_id' => new MongoId($instance->id),
+                        'assigner' => $value['assigner'],
+                        'assigned' => new MongoDate(),
+                    );
+                }
+
+                $result[] = $r;
+            }
+        }
+        $this->attributes['classifications'] = $result;
+    }
+
+    /**
+     * Accessor for the 'subjects' attribute
+     *
+     * @param $value
+     * @return array
+     */
+    public function getSubjectsAttribute($value)
+    {
+        if (is_null($value)) return null;
+
+        $result = array();
+        foreach ($value as $reference) {
+            if (isset($reference['assigned'])) {
+                $reference['assigned'] = $this->asDateTime($reference['assigned']);
+            }
+            $reference['internal_id'] = (string) $reference['internal_id'];
+            $result[] = $reference;
+        }
+        return $result;
+    }
+
+    /**
+     * Mutator for the 'subjects' attribute
+     *
+     * @param $value
+     * @throws Exception
+     */
+    public function setSubjectsAttribute($value)
+    {
+        $result = array();
+        foreach ($value as $key => $value) {
+
+            if (isset($value['internal_id'])) {
+
+                // Undo the effect of getSubjectsAttribute
+                $value['assigned'] = $this->fromDateTime($value['assigned']);
+                $value['internal_id'] = new MongoId($value['internal_id']);
+                $result[] = $value;
+
+            } else {
+
+                if (!is_array($value)) {
+                    throw new Exception('Document.subjects was given an unknown datatype.');
+                }
+
+                if (!isset($value['vocabulary'])) {
+                    Log::info('Ignore term without vocabulary: ' . $value['term']);
+                    continue;
+                }
+
+                $instance = Subject::where('vocabulary', '=', $value['vocabulary'])
+                    ->where('indexTerm', '=', $value['term'])
+                    ->first();
+
+                if (!$instance) {
+                    Log::info(sprintf('CREATE subject heading {vocabulary: "%s", term: "%s"}', $value['vocabulary'], $value['term']));
+                    $value['indexTerm'] = $value['term'];
+                    $instance = new Subject($value);
+                    $instance->save();
+                } else {
+                    // TODO: Update if changed
+                }
+
+                $r = $this->getSubdocumentById('subjects', $instance->id);
+
+                if (is_null($r)) {
+                    $r = array(
+                        'internal_id' => new MongoId($instance->id),
+                        'assigned' => new MongoDate(),
+                    );
+                }
+
+                $result[] = $r;
+            }
+        }
+        $this->attributes['subjects'] = $result;
+    }
+
+//    public function subjects()
+//    {
+//        // return $this->belongsToMany('Subject');
+//        return $this->embedsMany('SubjectInstance');
+//    }
+
+    /**
+     * Mutator for the 'subjects' attribute
+     *
+     * @param $value
+     */
+//    function setSubjectsAttribute($value)
+//    {
+//        print_r($value);
+//    }
+
+    /**
+     * Accessor for the 'subjects' attribute
+     *
+     * @return array
+     */
+//	public function getSubjectsAttribute()
+//	{
+//		$subjects = array();
+//		foreach ($this->subjects()->get() as $i) {
+//			if (isset($i->identifier)) {
+//				$uri = URL::action('SubjectsController@getId', array('vocabulary' => $i->vocabulary, 'term' => $i->identifier));
+//			} else {
+//				$uri = URL::action('SubjectsController@getId', array('vocabulary' => $i->vocabulary, 'term' => $i->indexTerm));
+//			}
+//			$s = array(
+//				'vocabulary' => $i->vocabulary,
+//				'indexTerm' => $i->indexTerm,
+//				'type' => $i->type,
+//				'uri' => $uri,
+//			);
+//			if (isset($i->id)) $s['local_id'] = $i->id;
+//			if (isset($i->identifier)) $s['id'] = $i->identifier;
+//			$subjects[] = $s;
+//		}
+//
+//		// Sort subject headings by vocabulary
+//		usort($subjects, function($a, $b) {
+//		    return strcmp(array_get($a, 'vocabulary', ''), array_get($b, 'vocabulary', ''));
+//		});
+//
+//		return $subjects;
+//	}
+
+	/* Accessor for the classifications attribute */
+//	public function getClassesAttribute()
+//	{
+//		$classes = array();
+//		foreach ($this->bibliographic['classifications'] as $i) {
+//			$s = $i;
+//			$s['uri'] = URL::action('ClassesController@getId', array('system' => $i['system'], 'number' => $i['number']));
+//			$classes[] = $s;
+//		}
+//
+//		// Sort classes by system
+//		usort($classes, function($a, $b) {
+//		    return strcmp(array_get($a, 'system', ''), array_get($b, 'system', ''));
+//		});
+//
+//		return $classes;
+//	}
+
+    /**
+     * Accessor for the virtual 'link' attribute
+     *
+     * @return array
+     */
+    public function getLinkAttribute() {
+        return URL::action('DocumentsController@getShow', array($this->id));
+    }
+
+    /**
+     * Helper method for attributesToArray()
+     *
+     * @param $refs
+     * @param $model
+     * @return mixed
+     */
+    protected function extendAttributes($refs, $model)
+    {
+        $toCopy = array('internal_id', 'assigned', 'assigner');
+        $toRemove = array('documents', 'created_at', 'updated_at', '_id');
+
+        $ids = array_map(function ($x) {
+            return strval($x['internal_id']);
+        }, $refs);
+        $items = $model::whereIn('_id', $ids)->get();
+
+        foreach ($refs as $i => $ref) {
+            $out = array();
+            foreach ($items as $item) {
+                if ($item->id == $ref['internal_id']) {
+                    $out = $item->toArray();
+                    break;
+                }
+            }
+            array_forget($out, $toRemove);
+            foreach ($toCopy as $x) {
+                if (isset($ref[$x])) $out[$x] = $ref[$x];
+            }
+            $refs[$i] = $out;
+        }
+        return $refs;
+    }
+
+    /**
+     * Return a read-only array representation of the model, extended with
+     * data from connected entitites, such as classifications and subject headings.
      *
      * @return array
      */
     public function attributesToArray()
     {
-
-
-		// Add links to guide the API user
-
-		if (isset($this->other_form) && isset($this->other_form['id'])) {
-			$of = $this->other_form;
-			$of['uri'] = URL::action('DocumentsController@getId', array($this->other_form['id']));
-			$this->other_form = $of;
-		}
-
-		$links = array(
-			array(
-				'rel' => 'self',
-				'uri' => URL::action('DocumentsController@getId', array($this->bibsys_id)),
-			)
-		);
-		$this->links = $links;
-
-
         $attributes = parent::attributesToArray();
 
-        // DateTime objects need to be converted to strings. Eloquent handles objects in the
-        // root of the document, but not in subdocuments (such as dates in the 'holdings' subdocuments)
-        // To make sure we have a consistent handling of dates, we convert all dates here.
-        //
-        // TODO: Automatically locate all DateTime fields instead of specifying them manually
-        //
-		if (isset($this->record_created)) $attributes['record_created'] = $this->record_created->toDateTimeString();
-		if (isset($this->record_modified)) $attributes['record_modified'] = $this->record_modified->toDateTimeString();
-		$holdings = array();
-		foreach ($this->holdings as $key => $holding) {
-			if (isset($holding['created'])) {
-				$holding['created'] = $holding['created']->toDateTimeString();
-			}
-			if (isset($holding['acquired'])) {
-				$holding['acquired'] = $holding['acquired']->toDateTimeString();
-			}
-			$holdings[] = $holding;
-		}
-		$attributes['holdings'] = $holdings;
+        // Convert DateTime objects to strings
+        // Eloquent can handle objects in the document root, but not in subdocuments
+        // (such as dates in the 'holdings' subdocuments)
+        $attributes = $this->flattenDates($attributes);
+
+        // Add links to guide the API user
+        $of = array_get($attributes, 'bibliographic.other_form.id');
+        if (!is_null($of)) {
+            $attributes['bibliographic']['other_form']['link'] = URL::action('DocumentsController@getShow', array($of));
+        }
+
+        // Extend classifications
+        $attributes['classifications'] = $this->extendAttributes($attributes['classifications'], 'Classification');
+
+        // Extend subjects
+        $attributes['subjects'] = $this->extendAttributes($attributes['subjects'], 'Subject');
 
         return $attributes;
     }
-
-    /* Accessor for the subjects attribute */
-	public function getSubjectsAttribute()
-	{
-		$subjects = array();
-		foreach ($this->subjects()->get() as $i) {
-			$s = array(
-				'vocabulary' => $i->vocabulary,
-				'indexTerm' => $i->indexTerm,
-				'uri' => URL::action('SubjectsController@getId', array('vocabulary' => $i->vocabulary, 'term' => $i->indexTerm)),
-			);
-			if (isset($i->id)) $s['id'] = $i->id;
-			$subjects[] = $s;
-		}
-
-		// Sort subject headings by vocabulary
-		usort($subjects, function($a, $b) {
-		    return strcmp(array_get($a, 'vocabulary', ''), array_get($b, 'vocabulary', ''));
-		});
-
-		return $subjects;
-	}
-
-	/* Accessor for the classifications attribute */
-	public function getClassesAttribute()
-	{
-		$classes = array();
-		foreach ($this->classifications as $i) {
-			$s = $i;
-			$s['uri'] = URL::action('ClassesController@getId', array('system' => $i['system'], 'number' => $i['number']));
-			$classes[] = $s;
-		}
-
-		// Sort classes by system
-		usort($classes, function($a, $b) {			
-		    return strcmp(array_get($a, 'system', ''), array_get($b, 'system', ''));
-		});
-
-		return $classes;
-	}
-
-	/**
-	 * Import a single record
-	 *
-	 * @param QuiteSimpleXmlElement $data
-	 * @param Symfony\Component\Console\Output\Output $output
-	 * @return boolean
-	 */
-	public function import(QuiteSimpleXmlElement $data, Symfony\Component\Console\Output\Output $output = null)
-	{
-		$parser = new Parser;
-
-		$holdings = array();
-
-		foreach ($data->xpath('.//marc:record') as $rec) {
-
-			$parsed = $parser->parse($rec);
-
-			if ($parsed instanceof Scriptotek\SimpleMarcParser\BibliographicRecord) {
-
-				if (isset($this->bibsys_id) && $this->bibsys_id != $parsed->id) {
-					$err = sprintf('Record import failed: ID %s does not match %s', $parsed->id, $this->bibsys_id);
-					throw new Exeption($err);
-				}
-				$this->bibsys_id = $parsed->id;
-
-				Clockwork::info('Importing: ' . $parsed->id);
-
-				foreach ($parsed->toArray() as $key => $val) {
-					switch ($key) {
-						case 'id':
-						//case 'isbns':
-						case 'subjects':
-							// ignore
-							break;
-						case 'created':
-						case 'modified':
-							// To avoid unecessary updates, it's important to only updates dates if they *actually*
-							// changed. In Eloquent, attributes are marked as dirty if not *identical*, but
-							// dates are objects, and two objects are identical if and only if they refer to the 
-							// *same instance* of the same class. So two date instances with the same numerical content 
-							// will not be identical.
-							$modKey = "record_" . $key;
-							if (!isset($this->{$modKey}) || ($this->{$modKey} != $val)) {
-								$this->{$modKey} = $val;
-							}
-							break;
-						default:
-							$this->{$key} = $val;
-					}
-				}
-
-				$localSubjects = array();
-				if (!is_null($this->id)) {  // Model has been stored to DB			
-					foreach ($this->subjects()->get() as $localSubject) {
-						$localSubjects[$localSubject->id] = array($localSubject->vocabulary, $localSubject->indexTerm, $localSubject);
-					}
-				}
-
-				if (isset($parsed->subjects)) {
-					foreach ($parsed->subjects as $subject) {
-
-						if (isset($subject['term']) && isset($subject['vocabulary'])) {
-
-							$subj = Subject::where('vocabulary', '=', $subject['vocabulary'])
-								              ->where('indexTerm', '=', $subject['term'])
-								              ->first();
-
-
-							// CREATE subject if it doesn't exist
-							if (!$subj) {
-								Log::info(sprintf('CREATE subject {vocabulary: "%s", indexTerm: "%s"} during import of document %s', $subject['vocabulary'], $subject['term'], $parsed->id));
-
-								// print(sprintf('CREATE subject {vocabulary: "%s", indexTerm: "%s"} during import of document %s', $subject['vocabulary'], $subject['term'], $parsed->id));
-								$subj = new Subject(array(
-									'vocabulary' => $subject['vocabulary'],
-									'indexTerm' => $subject['term'],
-								));
-								$subj->save();
-							}
-
-							// ADD subject to document
-							$fnd = false;
-							foreach ($localSubjects as $sid => $localSubject) {
-								// print " - " . $subject2['indexTerm'] . "\n";
-								if ($subject['term'] == $localSubject[1] && $subject['vocabulary'] == $localSubject[0]) {
-									$fnd = true;
-								}
-							}
-							if (!$fnd) {
-								Log::info(sprintf('[%s] ADD subject %s:%s', $parsed->id, $subject['vocabulary'], $subject['term']));
-								$localSubjects[$subj->id] = array($subject['vocabulary'], $subject['term']);
-								$this->subjects()->attach($subj);
-							}
-
-						}
-					}
-
-					$ids = array();
-					$masterSubjects = $parsed->subjects;
-					foreach ($localSubjects as $sid => $localSubject) {
-
-						$fnd = false;
-						foreach ($masterSubjects as $k => $masterSubject) {
-
-							if ($masterSubject['term'] == $localSubject[1] && array_get($masterSubject, 'vocabulary', '') == $localSubject[0]) {
-								$fnd = true;
-								// print $masterSubject['term'] . "\n";
-								unset($masterSubjects[$k]);
-								break;
-							}
-						}
-						if (!$fnd) {
-							Log::info(sprintf('[%s] REMOVE subject %s:%s', $parsed->id, $localSubject[0] , $localSubject[1]));
-							$this->subjects()->detach($localSubject[2]);
-							unset($localSubjects[$sid]);
-						}
-					}
-					//Log::info(sprintf("[%s] UPDATE set of subjects: (%s)", $parsed->id, implode(', ', array_keys($localSubjects))));
-					//$this->subjects()->sync(array_keys($localSubjects));
-					//Log::info('>OK');
-				}
-			}
-
-			if ($parsed instanceof Scriptotek\SimpleMarcParser\HoldingsRecord) {
-
-				$holding = $parsed->toArray();
-
-				// Ignore creation date of record, which is set to the current date by Bibsys
-				unset($holding['created']); 
-
-				$holdings[] = $holding;
-
-			}
-
-
-		}
-
-		if ($this->holdings != $holdings) {  // Weak comparison
-			$this->holdings = $holdings;
-		}
-	}
-
-	public function subjects()
-	{
-		return $this->belongsToMany('Subject');
-	}
 
 }

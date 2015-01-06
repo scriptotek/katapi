@@ -1,0 +1,71 @@
+
+<div ng-show="!subject">
+    ...
+</div>
+
+<div ng-show="subject && subject.error">
+    {{subject.error}}
+</div>
+
+<div ng-show="subject && !subject.error">
+
+    <div style="float: right;">
+        <a target="_self" ng-href="/subjects/{{ subject.vocabulary }}/{{ subject.indexTerm }}.json">[JSON]</a>
+    </div>
+
+    <h2>
+        {{ subject.indexTerm }}
+    </h2>
+
+    <div class="panel panel-default panel-descr">
+        <!-- Default panel contents -->
+        <div class="panel-heading">Description</div>
+
+        <div class="panel-body">
+
+            <table class="table">
+                <tr>
+                    <td>
+                        Index term: 
+                    </td>
+                    <td>
+                        {{subject.indexTerm}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        Vocabulary:
+                    </td>
+                    <td>
+                        {{subject.vocabulary}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        Identifier:
+                    </td>
+                    <td>
+                        {{subject.identifier}}
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+    </div>
+
+
+    <div class="panel panel-default panel-descr">
+        <!-- Default panel contents -->
+        <div class="panel-heading">Documents</div>
+
+        <div class="panel-body">
+            <ul>
+                <li ng-repeat="doc in subject.documents">
+                    <a href="{{ doc.link }}">{{ doc.title }}</a>
+                    ({{doc.edition}} {{doc.year}})
+                </li>
+            </ul>
+        </div>
+    </div>
+
+</div>

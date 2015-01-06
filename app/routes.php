@@ -20,23 +20,21 @@ Route::get('/', function()
 
 //Route::get('documents/show/{id}', 'BibsysController@getShow');
 
-Route::get('subjects/{vocabulary}/{term}.{format}', 'SubjectsController@getShow');
-Route::get('subjects/{vocabulary}/{term}', 'SubjectsController@getId');
-
-Route::get('classes/{system}/{number}.{format}', 'ClassesController@getShow');
-Route::get('classes/{system}/{number}', 'ClassesController@getId');
-
-Route::get('documents/show/{id}.{format}', 'DocumentsController@getShow')
-	->where(array('id' => '[0-9a-zA-Z-]+', 'format' => '[a-z.]+'));
-Route::get('documents/show/{id}', 'DocumentsController@getId')
-	->where(array('id' => '[0-9a-zA-Z-]+'));
-
-// Route::get('bibsys/{id}', function($id) {
-// 	return Redirect::action('BibsysController@getShow', $id);
-// });
-
 # /documents
 Route::get('documents', 'DocumentsController@getIndex');
+Route::get('documents/{id}', 'DocumentsController@getShow')
+    ->where(array('id' => '[0-9a-z.]+'));
+
+# /subjects
+Route::get('subjects', 'SubjectsController@getIndex');
+Route::get('subjects/{id}', 'SubjectsController@getShow')
+    ->where(array('id' => '[0-9a-z.]+'));
+
+# /classes
+Route::get('classes', 'ClassesController@getIndex');
+Route::get('classes/{id}', 'ClassesController@getShow')
+    ->where(array('id' => '[0-9a-z.]+'));
+
 
 # /libraries/show
 Route::get('libraries/show/{id}', 'LibrariesController@getShow');

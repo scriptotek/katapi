@@ -11,7 +11,7 @@ angular.module('katapi.api', ['katapi.documents'])
     var deferred = $q.defer();
 
     $http({
-      url: '/documents/show/' + id + '.json',
+      url: '/documents/' + id + '.json',
       method: 'GET',
       params: {
       }
@@ -69,7 +69,7 @@ angular.module('katapi.api', ['katapi.documents'])
     var deferred = $q.defer();
 
     $http({
-      url: '/libraries/show/' + id,
+      url: '/libraries/' + id,
       method: 'GET',
       params: {
         format: 'json'

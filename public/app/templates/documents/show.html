@@ -10,26 +10,26 @@
 <div ng-show="doc && !doc.error">
 
 	<div style="float: right;">
-		<a target="_self" ng-href="/documents/show/{{ doc.bibsys_id}}.json">[JSON]</a>
+		<a target="_self" ng-href="/documents/show/{{ biblio.id }}.json">[JSON]</a>
 	</div>
 
 	<div style="padding: 6px 0; font-size: 85%;">
-		Record {{ doc.bibsys_id }}, cataloged using <abbr title="{{ catalogingRules[doc.catalogingRules] || doc.catalogingRules }}">{{ doc.catalogingRules }}</abbr>.
+		Record {{ biblio.id }}, cataloged using <abbr title="{{ catalogingRules[biblio.catalogingRules] || biblio.catalogingRules }}">{{ biblio.catalogingRules }}</abbr>.
 		MARC21 XML source data:
-		<a ng-href="http://sru.bibsys.no/search/biblioholdings?operation=searchRetrieve&amp;version=1.1&amp;startRecord=1&amp;maximumRecords=10&amp;recordSchema=marcxchange&amp;query=bs.objektid%3D{{ doc.bibsys_id }}">SRU</a>
+		<a ng-href="http://sru.bibsys.no/search/biblioholdings?operation=searchRetrieve&amp;version=1.1&amp;startRecord=1&amp;maximumRecords=10&amp;recordSchema=marcxchange&amp;query=bs.objektid%3D{{ biblio.id }}">SRU</a>
 		/
-		<a ng-href="http://oai.bibsys.no/oai/repository?verb=GetRecord&amp;metadataPrefix=marcxchange&amp;identifier=oai:bibsys.no:collection:{{ doc.bibsys_id }}">OAI-PMH</a>.
+		<a ng-href="http://oai.bibsys.no/oai/repository?verb=GetRecord&amp;metadataPrefix=marcxchange&amp;identifier=oai:bibsys.no:collection:{{ biblio.id }}">OAI-PMH</a>.
 		Show record in:
-		<a ng-href="http://ask.bibsys.no/ask/action/show?kid=biblio&amp;visningsformat=bibsysmarc&amp;pid={{ doc.bibsys_id }}">Bibsys Ask</a>
+		<a ng-href="http://ask.bibsys.no/ask/action/show?kid=biblio&amp;visningsformat=bibsysmarc&amp;pid={{ biblio.id }}">Bibsys Ask</a>
 		/
-		<a ng-href="http://bibsys-primo.hosted.exlibrisgroup.com/primo_library/libweb/action/dlDisplay.do?vid=UBO&amp;docId=BIBSYS_ILS{{ doc.bibsys_id }}">Primo</a>.
+		<a ng-href="http://bibsys-primo.hosted.exlibrisgroup.com/primo_library/libweb/action/dlDisplay.do?vid=UBO&amp;docId=BIBSYS_ILS{{ biblio.id }}">Primo</a>.
 	</div>
 
 	<h2>
-		{{ doc.title }}{{ 
-			doc.part_no ? ', ' + doc.part_no : ''
-		}}{{ 
-			doc.year ? ' (' + doc.year + ')' : ''
+		{{ biblio.title }}{{ 
+			biblio.part_no ? ', ' + biblio.part_no : ''
+		}}{{
+			(biblio.edition || biblio.year) ? ' (' + (biblio.edition + ' ' + biblio.year).trim() + ')' : ''
 		}}
 	</h2>
 
@@ -45,13 +45,13 @@
 					Material:
 				</td>
 				<td>
-					{{doc.material}} {{ doc.electronic ? ' (electronic)' : ' (physical)' }}
+					{{biblio.material}} {{ biblio.electronic ? ' (electronic)' : ' (physical)' }}
 
-					<div ng-show="doc.other_form && docs.length == 1">
-						<i class="fa fa-hand-o-right"></i> <a ng-href="/documents/show/{{ doc.other_form.id }}">
-						{{ doc.electronic ? 'A printed' : 'An electronic' }} edition</a>
+					<div ng-show="biblio.other_form && docs.length == 1">
+						<i class="fa fa-hand-o-right"></i> <a ng-href="/documents/show/{{ biblio.other_form.id }}">
+						{{ biblio.electronic ? 'A printed' : 'An electronic' }} edition</a>
 						is also available
-						<a ng-href="/documents/compare/{{ doc.bibsys_id }}/{{ doc.other_form.id }}">(compare)</a>
+						<a ng-href="/documents/compare/{{ biblio.id }}/{{ biblio.other_form.id }}">(compare)</a>
 					</div>
 
 				</td>
@@ -61,16 +61,16 @@
 					Publisher:
 				</td>
 				<td>
-					{{ doc.publisher }}
+					{{ biblio.publisher }}
 				</td>
 			</tr>
-			<tr>
+			<tr ng-show="biblio.isbns.length != 0">
 				<td>
 					ISBNs:
 				</td>
 				<td>
 					<ul>
-						<li ng-repeat="isbn in doc.isbns">
+						<li ng-repeat="isbn in biblio.isbns">
 							{{ isbn }}
 						</li>
 					</ul>
@@ -82,31 +82,43 @@
 				</td>
 				<td>
 					<ul>
-						<li ng-repeat="author in doc.authors">
-							<a ng-show="author.bibsys_identifier" ng-href="http://tools.wmflabs.org/bsaut/show/{{ author.bibsys_identifier }}">{{ author.name }}</a>
-							<span ng-show="!author.bibsys_identifier">{{ author.name }}</span>
+						<li ng-repeat="author in biblio.creators">
+							<a ng-show="author.id" ng-href="http://tools.wmflabs.org/bsaut/show/{{ author.id }}">{{ author.name }}</a>
+							<span ng-show="!author.id">{{ author.name }}</span>
 							({{ roles.nb[author.role] || author.role }})
 						</li>
 					</ul>
 				</td>
 			</tr>
+			<tr ng-show="biblio.notes.length != 0">
+				<td>
+					Notes:
+				</td>
+				<td>
+					<ul>
+						<li ng-repeat="note in biblio.notes">
+							{{ note }}
+						</li>
+					</ul>
+				</td>
+			</tr>
 
-			<tr ng-show="doc.is_multivolume">
+			<tr ng-show="biblio.is_multivolume">
 				<td>
 					Volumes:
 				</td>
 				<td>
-					<volumes item-id="{{ doc.bibsys_id }}"></volumes>
+					<volumes item-id="{{ biblio.bibsys_id }}"></volumes>
 				</td>
 			</tr>
 
-			<tr ng-show="doc.forms && doc.forms.length">
+			<tr ng-show="biblio.forms && biblio.forms.length">
 				<td>
 					Form/genre:
 				</td>
 				<td>
 					<ul>
-						<li ng-repeat="form in doc.forms">
+						<li ng-repeat="form in biblio.forms">
 		                    {{ form.term }}
 		                    <span class="vocabulary" ng-show="form.vocabulary">
 		                      <!-- ( . array_get(Subject::$vocabularies, $val['vocabulary'], $val['vocabulary']) . ')-->
@@ -116,28 +128,28 @@
 				</td>
 			</tr>
 
-			<tr ng-show="doc.preceding && doc.preceding.items">
+			<tr ng-show="biblio.preceding && biblio.preceding.items">
 				<td>
 					Preceding:
 				</td>
 				<td>
-					{{ doc.preceding.relationship_type }}:
+					{{ biblio.preceding.relationship_type }}:
 					<ul>
-						<li ng-repeat="item in doc.preceding.items">
+						<li ng-repeat="item in biblio.preceding.items">
 							<work item-id="{{ item.id }}" item-part="{{ item.related_parts }}"></work>
 						</li>
 					</ul>
 				</td>
 			</tr>
 
-			<tr ng-show="doc.succeeding && doc.succeeding.items">
+			<tr ng-show="biblio.succeeding && biblio.succeeding.items">
 				<td>
 					Succeeding:
 				</td>
 				<td>
-					{{ doc.succeeding.relationship_type }}:
+					{{ biblio.succeeding.relationship_type }}:
 					<ul>
-						<li ng-repeat="item in doc.succeeding.items">
+						<li ng-repeat="item in biblio.succeeding.items">
 							<work item-id="{{ item.id }}" item-part="{{ item.related_parts }}"></work>
 						</li>
 					</ul>
@@ -146,20 +158,20 @@
 
 		</table>
 
-		<div ng-show="doc.is_series">
+		<div ng-show="biblio.is_series">
 			is series work		
 		</div>
 
-		<ul ng-show="doc.series">
-			<li ng-repeat="series in doc.series">
+		<ul ng-show="biblio.series">
+			<li ng-repeat="series in biblio.series">
 				Part of {{ series.title }}
 			</li>
 		</ul>
-		<ul ng-show="doc.part_of">
+		<ul ng-show="biblio.part_of">
 			<li>
-				{{doc.part_of.relationship}} 
-				<work ng-show="doc.part_of.bibsys_id" item-id="{{ doc.part_of.bibsys_id }}" ></work>
-				<span ng-show="!doc.part_of.bibsys_id">{{ doc.part_of.title }}</span>
+				{{biblio.part_of.relationship}} 
+				<work ng-show="biblio.part_of.bibsys_id" item-id="{{ biblio.part_of.bibsys_id }}" ></work>
+				<span ng-show="!biblio.part_of.bibsys_id">{{ biblio.part_of.title }}</span>
 
 			</li>
 		</ul>
@@ -178,7 +190,7 @@
 				</span>
 				<ul>
 					<li ng-repeat="itm in items">
-						<a href="{{ itm.url }}"><span class="fa fa-tag"></span> {{ itm.term }}</a>
+						<a href="{{ itm.link }}"><span class="fa fa-tag"></span> {{ itm.term }}</a>
 						<span style="color:#888;" ng-show="itm.edition">
 						(ed. {{itm.edition}})
 						</span>
@@ -198,7 +210,7 @@
 
 		<div class="panel-body">
 		<ul class="list-group" style="list-style-type: none;">
-			<li style="margin-top:.5em" ng-repeat="holding in doc.holdings">
+			<li style="margin-top:.5em" ng-repeat="holding in holdings">
 
 				<div><span class="fa {{ holding.circulation_status == 'Available' ? 'fa-check-circle text-success' : 'fa-times-circle text-warning' }}"></span>
 				{{ holding.shelvinglocation }}{{ 

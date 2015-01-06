@@ -13,3 +13,4 @@
 
 Artisan::add(new HarvestBibsys);
 Artisan::add(new HarvestRealfagstermer);
+Artisan::add(new ImportHarvest);

@@ -1,14 +1,32 @@
 <?php
 
-use Jenssegers\Mongodb\Model as Eloquent;
+/**
+ * A single subject heading in a controlled subject heading vocabulary.
+ *
+ * @property string id
+ * @property string vocabulary
+ * @property string indexTerm
+ * @property string|null identifier
+ * @property string|null type
+ */
+class Subject extends BaseModel {
 
-class Subject extends Eloquent {
-
+    /**
+     * The MongoDB collection associated with the model.
+     *
+     * @var string
+     */
 	protected $collection = 'subjects';
 
-	protected $fillable = array('indexTerm', 'vocabulary');	
-	protected $visible = array('_id', 'identifier', 'created_at', 'updated_at', 
-		'indexTerm', 'vocabulary', 'prefLabels', 'altLabels');
+	protected $fillable = array(
+        'vocabulary',
+        'indexTerm',
+        'identifier',
+        'type',
+    );
+
+//	protected $visible = array('_id', 'identifier', 'created_at', 'updated_at',
+//		'indexTerm', 'vocabulary', 'prefLabels', 'altLabels');
 
 	/**
 	 * Authoritative list of vocabulary names
@@ -23,12 +41,34 @@ class Subject extends Eloquent {
 		'psychit' => 'APA Thesaurus of psychological index terms',
 	);
 
-	public function documents()
+    /**
+     * Appended, calculated attributes to this model that are not really in the
+     * attributes array, but are run when we need to array or JSON the model.
+     *
+     * @var array
+     */
+    protected $appends = array('documents', 'link');
+
+    /**
+     * Accessor for the virtual 'documents' attribute
+     *
+     * @return array
+     */
+    function getDocumentsAttribute()
     {
-        return $this->belongsToMany('Document');
+        return $this->getRelatedDocuments('subjects');
     }
 
-	/**
+    /**
+     * Accessor for the virtual 'link' attribute
+     *
+     * @return array
+     */
+    public function getLinkAttribute() {
+        return URL::action('SubjectsController@getShow', array($this->id));
+    }
+
+    /**
 	 * Convert the model instance to an array.
 	 * Override in order to present a *simplified* representation of the documents array
 	 * instead of embedding the complete documents
@@ -37,21 +77,14 @@ class Subject extends Eloquent {
 	 */
 	public function toArray()
 	{
-		$attributes = $this->attributesToArray();
+        $attributes = parent::attributesToArray();
 
-		$docs = array();
-		foreach ($this->documents()->get() as $doc) {
-			$docs[] = array(
-				'id' => $doc->bibsys_id,
-				'uri' =>  URL::action('DocumentsController@getId', array('id' => $doc->bibsys_id)),
-			); 
-		}
+        // Convert DateTime objects to strings
+        // Eloquent can handle objects in the document root, but not in subdocuments
+        // (such as dates in the 'holdings' subdocuments)
+        $attributes = $this->flattenDates($attributes);
 
-		// Appends docs
-		$res = array_merge($attributes, $this->relationsToArray());
-		$res['documents'] = $docs;
-
-		return $res;
+        return $attributes;
 	}
    
 }

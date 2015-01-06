@@ -110,6 +110,7 @@ return array(
 		'Jenssegers\Mongodb\MongodbServiceProvider',
 		'Clockwork\Support\Laravel\ClockworkServiceProvider',
 		'Barryvdh\Cors\CorsServiceProvider',
+		'Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider',
 	),
 
 	/*
