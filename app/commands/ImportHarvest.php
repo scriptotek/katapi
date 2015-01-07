@@ -127,10 +127,12 @@ class ImportHarvest extends Command {
 		foreach ($files as $n => $filename) {
 			$dt = round((microtime(true) - $t1)*100)/100;
             $dt2 = round((microtime(true) - $t0)*100)/100;
+            $mem = round(memory_get_usage()/1024/102.4)/10;
             $t1 = microtime(true);
             $this->info(
                 'Got: ' . Document::count() . ', ' . Subject::count() . ' subjects. ' .
                 'Last file: ' . $dt . ' secs, total: ' . $dt2 . ' secs. ' .
+                'Memory: ' . $mem . ' MB. ' .
                 'Importing ' . ($n + 1) . ' of ' . count($files) . ' : ' .
                 basename($filename)
             );
