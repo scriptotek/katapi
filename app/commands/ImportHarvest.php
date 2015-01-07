@@ -103,7 +103,7 @@ class ImportHarvest extends Command {
 	 *
 	 * @param $files string[]
 	 * @param $oaiSet string
-     */
+	 */
 	function importFiles($files, $oaiSet) {
 
 		// $this->progress = new ProgressBar($this->output, $records->numberOfRecords);
@@ -123,30 +123,47 @@ class ImportHarvest extends Command {
 		// }
 		// $this->progress->finish();
 
-        $t0 = $t1 = microtime(true);
-		foreach ($files as $n => $filename) {
-			$dt = round((microtime(true) - $t1)*100)/100;
-            $dt2 = round((microtime(true) - $t0)*100)/100;
-            $mem = round(memory_get_usage()/1024/102.4)/10;
-            $t1 = microtime(true);
-            $this->info(
-                'Got: ' . Document::count() . ', ' . Subject::count() . ' subjects. ' .
-                'Last file: ' . $dt . ' secs, total: ' . $dt2 . ' secs. ' .
-                'Memory: ' . $mem . ' MB. ' .
-                'Importing ' . ($n + 1) . ' of ' . count($files) . ' : ' .
-                basename($filename)
-            );
-			$n = 0;
-            try {
+		$t0 = $t1 = microtime(true);
+		$recordNo = 0;
+		$nFiles = count($files);
+
+		foreach ($files as $fileNo => $filename) {
+
+			if (($fileNo+2) % 10 == 0) {
+				$dt = round((microtime(true) - $t1)*100)/100;
+				$dt2 = round((microtime(true) - $t0)*100)/100;
+				$mem = round(memory_get_usage()/1024/102.4)/10;
+				$t1 = microtime(true);
+				$percentage = ($fileNo + 1) / $nFiles;
+				$et = $dt2 / $percentage - $dt2;
+				$h = floor($et / 3600);
+				$m = floor(($et - ($h * 3600)) / 60);
+				$s = round($et - $h * 3600 - $m * 60);
+
+				$this->info(sprintf(
+					'[%5.2f %%] ETA: %s, speed: %.1f s/10 files, mem: %.1f MB. Parsed: %d files, %d records. DB: %d records, %d subjects.',
+					$percentage * 100,
+					sprintf("%02d:%02d:%02d", $h, $m, $s),
+					$dt,
+					$mem,
+					$fileNo,
+					$recordNo,
+					Document::count(),
+					Subject::count()
+				));
+			}
+
+			try {
 				$response = new ListRecordsResponse(file_get_contents($filename));
 				foreach ($response->records as $record) {
 					if ($this->importRecord($record, $oaiSet)) {
-                        $n += 1;
-                    }
+						$recordNo += 1;
+					}
 				}
 			} catch (Danmichaelo\QuiteSimpleXMLElement\InvalidXMLException $e) {
-				$this->error('Uh oh, invalid XML! Skipping file');
+				$this->error('Uh oh, invalid XML! Skipping file: ' . $filename);
 			}
+
 		}
 	}
 
@@ -156,17 +173,17 @@ class ImportHarvest extends Command {
 	 * @param OaiRecord $record
 	 * @param $oaiSet
 	 * @return boolean
-     */
+	 */
 	public function importRecord(OaiRecord $record, $oaiSet)
 	{
-        try {
-            $doc = Document::fromRecord($record->data);
-        } catch (ParserException $e) {
-            $this->error('Failed to parse OAI record "' . $record->identifier . '". Error "' . $e->getMessage() . '" in: ' . $e->getFile() . ':' . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString());
-            return false;
-        }
+		try {
+			$doc = Document::fromRecord($record->data);
+		} catch (ParserException $e) {
+			$this->error('Failed to parse OAI record "' . $record->identifier . '". Error "' . $e->getMessage() . '" in: ' . $e->getFile() . ':' . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString());
+			return false;
+		}
 
-        $id = $doc->bibliographic['id'];
+		$id = $doc->bibliographic['id'];
 
 		if (!isset($doc->oai_sets)) {
 			$doc->oai_sets = array();
