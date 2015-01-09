@@ -163,6 +163,8 @@ class Document extends BaseModel {
      */
     public function setHoldingsAttribute($value)
 	{
+        $out = array();
+        $ids = array();
 		foreach ($value as $key => $holding) {
 
             if ($holding instanceof HoldingsRecord) {
@@ -176,6 +178,16 @@ class Document extends BaseModel {
                 unset($holding['created']);
 			}
 
+            if ($holding['bibliographic_record'] != $this->bibliographic['id']) {
+                // Ignore (holdings for i-analytter er duplikater av holdings for overordnet post)
+                continue;
+            }
+
+            if (in_array($holding['id'], $ids)) {
+                // Filter out duplicates from Bibsys...
+                continue;
+            }
+
 			if (isset($holding['acquired'])) {
 				$holding['acquired'] = $this->fromDateTime($holding['acquired']);
 			} else {
@@ -187,9 +199,10 @@ class Document extends BaseModel {
                 $holding['acquired'] = $this->fromDateTime(strval($yr) . '-01-01 00:00:00');
             }
 
-            $value[$key] = $holding;
+            $out[] = $holding;
+            $ids[] = $holding['id'];
 		}
-		$this->attributes['holdings'] = $value;
+		$this->attributes['holdings'] = $out;
 	}
 
     /**
