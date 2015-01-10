@@ -290,6 +290,7 @@ class Document extends BaseModel {
                     'edition' => $classification['edition'],
                 ));
                 $instance->save();
+                $results[] = $instance;
             }
 
             $r = $this->getSubdocumentById('classifications', $instance->id);
@@ -397,6 +398,7 @@ class Document extends BaseModel {
                 $subject['indexTerm'] = $subject['term'];
                 $instance = new Subject($subject);
                 $instance->save();
+                $results[] = $instance;
             }
 
             $r = $this->getSubdocumentById('subjects', $instance->id);
