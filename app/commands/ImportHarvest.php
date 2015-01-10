@@ -124,7 +124,7 @@ class ImportHarvest extends Command {
 		// $this->progress->finish();
 
 		$t0 = $t1 = microtime(true);
-		$recordNo = 0;
+		$recordNo = 0; $recordNoBatch = 0;
 		$nFiles = count($files);
 
 		foreach ($files as $fileNo => $filename) {
@@ -139,14 +139,16 @@ class ImportHarvest extends Command {
 				$h = floor($et / 3600);
 				$m = floor(($et - ($h * 3600)) / 60);
 				$s = round($et - $h * 3600 - $m * 60);
+				$nrecs = $recordNo - $recordNoBatch;
+				$recordNoBatch = $recordNo;
+				$recsPerSec = $nrecs/$dt;
 
 				$this->info(sprintf(
-					'[%5.2f %%] ETA: %s, speed: %.1f s/10 files, mem: %.1f MB. Parsed: %d files, %d records. DB: %d records, %d subjects.',
+					'[%5.2f %%] ETA: %s, speed: %d recs/s, mem: %.1f MB. Parsed %d records. DB holds %d records, %d subjects.',
 					$percentage * 100,
 					sprintf("%02d:%02d:%02d", $h, $m, $s),
-					$dt,
+					$recsPerSec,
 					$mem,
-					$fileNo,
 					$recordNo,
 					Document::count(),
 					Subject::count()
@@ -161,7 +163,7 @@ class ImportHarvest extends Command {
 					}
 				}
 			} catch (Danmichaelo\QuiteSimpleXMLElement\InvalidXMLException $e) {
-				$this->error('Uh oh, invalid XML! Skipping file: ' . $filename);
+				$this->error('Invalid XML found! Skipping file: ' . $filename);
 			}
 
 		}
@@ -179,9 +181,9 @@ class ImportHarvest extends Command {
 		try {
 			$doc = Document::fromRecord($record->data);
 		} catch (ParserException $e) {
-			$this->error('Failed to parse OAI record "' . $record->identifier . '". Error "' . $e->getMessage() . '" in: ' . $e->getFile() . ':' . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString());
-			return false;
-		}
+            $this->error('Failed to parse OAI record "' . $record->identifier . '". Error "' . $e->getMessage() . '" in: ' . $e->getFile() . ':' . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString());
+            return false;
+        }
 
 		$id = $doc->bibliographic['id'];
 
