@@ -229,56 +229,84 @@ class Document extends BaseModel {
     /**
      * Mutator for the 'classifications' attribute
      *
-     * @param $value
+     * @param $classifications
      * @throws Exception
      */
-    public function setClassificationsAttribute($value)
+    public function setClassificationsAttribute($classifications)
     {
-        $result = array();
-        foreach ($value as $key => $value) {
+        $out = array();
+        
+        $queryItems = array();
+        foreach ($classifications as $classification) {
 
-            if (!is_array($value)) {
+            if (!is_array($classification)) {
                 throw new Exception('Document.classifications was given an unknown datatype.');
             }
 
-            if (isset($value['internal_id'])) {
+            if (isset($classification['internal_id'])) {
 
-                // Undo the effect of getClassificationsAttribute
-                $value['assigned'] = $this->fromDateTime($value['assigned']);
-                $value['internal_id'] = new MongoId($value['internal_id']);
-                $result[] = $value;
+                // Just undo the effect of getClassificationsAttribute
+                $classification['assigned'] = $this->fromDateTime($classification['assigned']);
+                $classification['internal_id'] = new MongoId($classification['internal_id']);
+                $out[] = $classification;
 
             } else {
 
-                $instance = Classification::where('system', '=', $value['system'])
-                    ->where('number', '=', $value['number'])
-                    ->where('edition', '=', $value['edition'])
-                    ->first();
-
-                if (!$instance) {
-                    Log::info(sprintf('CREATE classification {system: "%s", number: "%s"}', $value['system'], $value['number']));
-                    $instance = new Classification(array(
-                        'system' => $value['system'],
-                        'number' => $value['number'],
-                        'edition' => $value['edition'],
-                    ));
-                    $instance->save();
-                }
-
-                $r = $this->getSubdocumentById('classifications', $instance->id);
-
-                if (is_null($r)) {
-                    $r = array(
-                        'internal_id' => new MongoId($instance->id),
-                        'assigner' => $value['assigner'],
-                        'assigned' => new MongoDate(),
-                    );
-                }
-
-                $result[] = $r;
+                // Add to items to be queried
+                $queryItems[] = array('system' => $classification['system'], 'edition' => $classification['edition'], 'number' => $classification['number'], );
             }
         }
-        $this->attributes['classifications'] = $result;
+
+        if (count($queryItems) == 0) {
+            $this->attributes['classifications'] = $out;
+            return;
+        }
+
+        // Go ahead and query the database
+        $query = array('$or' => $queryItems);
+        $results = Classification::whereRaw($query)->get();
+
+        foreach ($classifications as $classification) {
+            if (isset($classification['internal_id'])) continue;
+
+            $fnd = false;
+
+            foreach ($results as $res) {
+
+                if ($classification['system'] == $res['system'] && $classification['edition'] == $res['edition'] && $classification['number'] == $res['number']) {
+                    $fnd = true;
+                    $instance = $res;
+
+                    // Q: Should we do some updating?
+
+                }
+            }
+
+            if (!$fnd) {
+                Log::info(sprintf('CREATE classification {system: "%s", number: "%s"}', $classification['system'], $classification['number']));
+                $instance = new Classification(array(
+                    'system' => $classification['system'],
+                    'number' => $classification['number'],
+                    'edition' => $classification['edition'],
+                ));
+                $instance->save();
+            }
+
+            $r = $this->getSubdocumentById('classifications', $instance->id);
+
+            if (is_null($r)) {
+                $r = array(
+                    'internal_id' => new MongoId($instance->id),
+                    'assigner' => $classification['assigner'],
+                    'assigned' => new MongoDate(),
+                );
+            }
+
+            $out[] = $r;
+
+        }
+
+        $this->attributes['classifications'] = $out;
     }
 
     /**
@@ -308,55 +336,81 @@ class Document extends BaseModel {
      * @param $value
      * @throws Exception
      */
-    public function setSubjectsAttribute($value)
+    public function setSubjectsAttribute($subjects)
     {
-        $result = array();
-        foreach ($value as $key => $value) {
+        $out = array();
 
-            if (isset($value['internal_id'])) {
+        $queryItems = array();
+        foreach ($subjects as $subject) {
 
-                // Undo the effect of getSubjectsAttribute
-                $value['assigned'] = $this->fromDateTime($value['assigned']);
-                $value['internal_id'] = new MongoId($value['internal_id']);
-                $result[] = $value;
+            if (!is_array($subject)) {
+                throw new Exception('Document.subjects was given an unknown datatype.');
+            }
+
+            if (!isset($subject['vocabulary'])) {
+                Log::info('Ignore term without vocabulary: ' . $subject['term']);
+                continue;
+            }
+
+            if (isset($subject['internal_id'])) {
+
+                // Just undo the effect of getSubjectsAttribute
+                $subject['assigned'] = $this->fromDateTime($subject['assigned']);
+                $subject['internal_id'] = new MongoId($subject['internal_id']);
+                $out[] = $subject;
 
             } else {
 
-                if (!is_array($value)) {
-                    throw new Exception('Document.subjects was given an unknown datatype.');
-                }
-
-                if (!isset($value['vocabulary'])) {
-                    Log::info('Ignore term without vocabulary: ' . $value['term']);
-                    continue;
-                }
-
-                $instance = Subject::where('vocabulary', '=', $value['vocabulary'])
-                    ->where('indexTerm', '=', $value['term'])
-                    ->first();
-
-                if (!$instance) {
-                    Log::info(sprintf('CREATE subject heading {vocabulary: "%s", term: "%s"}', $value['vocabulary'], $value['term']));
-                    $value['indexTerm'] = $value['term'];
-                    $instance = new Subject($value);
-                    $instance->save();
-                } else {
-                    // TODO: Update if changed
-                }
-
-                $r = $this->getSubdocumentById('subjects', $instance->id);
-
-                if (is_null($r)) {
-                    $r = array(
-                        'internal_id' => new MongoId($instance->id),
-                        'assigned' => new MongoDate(),
-                    );
-                }
-
-                $result[] = $r;
+                // Add to items to be queried
+                $queryItems[] = array('vocabulary' => $subject['vocabulary'], 'indexTerm' => $subject['term'], );
             }
         }
-        $this->attributes['subjects'] = $result;
+
+        if (count($queryItems) == 0) {
+            $this->attributes['subjects'] = $out;
+            return;
+        }
+
+        // Go ahead and query the database
+        $query = array('$or' => $queryItems);
+        $results = Subject::whereRaw($query)->get();
+
+        foreach ($subjects as $subject) {
+            if (isset($subject['internal_id'])) continue;
+            if (!isset($subject['vocabulary'])) continue;
+
+            $fnd = false;
+
+            foreach ($results as $res) {
+
+                if ($subject['vocabulary'] == $res['vocabulary'] && $subject['term'] == $res['indexTerm']) {
+                    $fnd = true;
+                    $instance = $res;
+
+                    // Q: Should we do some updating?
+
+                }
+            }
+
+            if (!$fnd) {
+                Log::info(sprintf('CREATE subject heading {vocabulary: "%s", term: "%s"}', $subject['vocabulary'], $subject['term']));
+                $subject['indexTerm'] = $subject['term'];
+                $instance = new Subject($subject);
+                $instance->save();
+            }
+
+            $r = $this->getSubdocumentById('subjects', $instance->id);
+
+            if (is_null($r)) {
+                $r = array(
+                    'internal_id' => new MongoId($instance->id),
+                    'assigned' => new MongoDate(),
+                );
+            }
+
+            $out[] = $r;
+        }
+        $this->attributes['subjects'] = $out;
     }
 
 //    public function subjects()

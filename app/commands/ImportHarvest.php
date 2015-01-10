@@ -141,17 +141,17 @@ class ImportHarvest extends Command {
 				$s = round($et - $h * 3600 - $m * 60);
 				$nrecs = $recordNo - $recordNoBatch;
 				$recordNoBatch = $recordNo;
-				$recsPerSec = $nrecs/$dt;
+				$recsPerSecCur = $nrecs/$dt;
+				$recsPerSec = $recordNo / $dt2;
 
 				$this->info(sprintf(
-					'[%5.2f %%] ETA: %s, speed: %d recs/s, mem: %.1f MB. Parsed %d records. DB holds %d records, %d subjects.',
+					'[%5.2f %%] ETA: %s, current speed: %d recs/s, avg speed: %d recs/s, mem: %.1f MB. Parsed %d records.',
 					$percentage * 100,
 					sprintf("%02d:%02d:%02d", $h, $m, $s),
+					$recsPerSecCur,
 					$recsPerSec,
 					$mem,
-					$recordNo,
-					Document::count(),
-					Subject::count()
+					$recordNo
 				));
 			}
 
