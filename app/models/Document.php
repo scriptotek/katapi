@@ -71,7 +71,7 @@ class Document extends BaseModel {
             Log::info('CREATE document "' . $biblio->id . '"');
             $doc = new Document;
         } else {
-            Log::info('UPDATE document "' . $biblio->id . '"');
+            // Log::info('UPDATE document "' . $biblio->id . '"');
         }
 
         // Update document
@@ -265,6 +265,7 @@ class Document extends BaseModel {
         // Go ahead and query the database
         $query = array('$or' => $queryItems);
         $results = Classification::whereRaw($query)->get();
+        $toCreate = array();
 
         foreach ($classifications as $classification) {
             if (isset($classification['internal_id'])) continue;
@@ -283,21 +284,17 @@ class Document extends BaseModel {
             }
 
             if (!$fnd) {
-                Log::info(sprintf('CREATE classification {system: "%s", number: "%s"}', $classification['system'], $classification['number']));
-                $instance = new Classification(array(
-                    'system' => $classification['system'],
-                    'number' => $classification['number'],
-                    'edition' => $classification['edition'],
-                ));
-                $instance->save();
-                $results[] = $instance;
+                $classification['_id'] = new MongoId;   // Pre-allocate ID
+                $toCreate[] = $classification;
+                $results[] = $classification;
+                $instance = $classification;
             }
 
-            $r = $this->getSubdocumentById('classifications', $instance->id);
+            $r = $this->getSubdocumentById('classifications', $instance['_id']);
 
             if (is_null($r)) {
                 $r = array(
-                    'internal_id' => new MongoId($instance->id),
+                    'internal_id' => $instance['_id'],
                     'assigner' => $classification['assigner'],
                     'assigned' => new MongoDate(),
                 );
@@ -305,6 +302,17 @@ class Document extends BaseModel {
 
             $out[] = $r;
 
+        }
+
+        // Insert
+        if (count($toCreate) != 0) {
+
+            $classifications = array();
+            foreach ($toCreate as $classification) {
+                Log::info(sprintf('CREATE classification {system: "%s", number: "%s"}', $classification['system'], $classification['number']));
+                $classifications[] = $classification;
+            }
+            DB::collection('classifications')->insert($classifications);
         }
 
         $this->attributes['classifications'] = $out;
@@ -348,10 +356,9 @@ class Document extends BaseModel {
                 throw new Exception('Document.subjects was given an unknown datatype.');
             }
 
-            if (!isset($subject['vocabulary'])) {
-                Log::info('Ignore term without vocabulary: ' . $subject['term']);
-                continue;
-            }
+            // if (is_null($subject['vocabulary'])) {
+            //     Log::info('Found term without vocabulary: ' . $subject['term']);
+            // }
 
             if (isset($subject['internal_id'])) {
 
@@ -375,10 +382,10 @@ class Document extends BaseModel {
         // Go ahead and query the database
         $query = array('$or' => $queryItems);
         $results = Subject::whereRaw($query)->get();
+        $toCreate = array();
 
         foreach ($subjects as $subject) {
             if (isset($subject['internal_id'])) continue;
-            if (!isset($subject['vocabulary'])) continue;
 
             $fnd = false;
 
@@ -394,24 +401,36 @@ class Document extends BaseModel {
             }
 
             if (!$fnd) {
-                Log::info(sprintf('CREATE subject heading {vocabulary: "%s", term: "%s"}', $subject['vocabulary'], $subject['term']));
                 $subject['indexTerm'] = $subject['term'];
-                $instance = new Subject($subject);
-                $instance->save();
-                $results[] = $instance;
+                $subject['_id'] = new MongoId;   // Pre-allocate ID
+                $toCreate[] = $subject;
+                $results[] = $subject;
+                $instance = $subject;
             }
 
-            $r = $this->getSubdocumentById('subjects', $instance->id);
+            $r = $this->getSubdocumentById('subjects', $instance['_id']);
 
             if (is_null($r)) {
                 $r = array(
-                    'internal_id' => new MongoId($instance->id),
+                    'internal_id' => $instance['_id'],
                     'assigned' => new MongoDate(),
                 );
             }
 
             $out[] = $r;
         }
+
+        // Insert
+        if (count($toCreate) != 0) {
+
+            $subjects = array();
+            foreach ($toCreate as $subject) {
+                Log::info(sprintf('CREATE subject heading {vocabulary: "%s", term: "%s"}', $subject['vocabulary'], $subject['term']));
+                $subjects[] = $subject;
+            }
+            DB::collection('subjects')->insert($subjects);
+        }
+
         $this->attributes['subjects'] = $out;
     }
 
