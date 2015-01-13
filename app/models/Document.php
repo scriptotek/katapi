@@ -294,7 +294,7 @@ class Document extends BaseModel {
 
             if (is_null($r)) {
                 $r = array(
-                    'internal_id' => $instance['_id'],
+                    'internal_id' => new MongoId($instance['_id']),
                     'assigner' => $classification['assigner'],
                     'assigned' => new MongoDate(),
                 );
@@ -412,7 +412,7 @@ class Document extends BaseModel {
 
             if (is_null($r)) {
                 $r = array(
-                    'internal_id' => $instance['_id'],
+                    'internal_id' => new MongoId($instance['_id']),
                     'assigned' => new MongoDate(),
                 );
             }
