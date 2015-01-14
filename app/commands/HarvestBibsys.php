@@ -137,7 +137,7 @@ class HarvestBibsys extends Command {
 
 		$client->on('request.complete', function($verb, $args, $body) {
 			$sha = sha1(json_encode($args));
-			$fname = storage_path("harvest/$sha.xml");
+			$fname = storage_path("harvest/tmp.xml");
 			file_put_contents($fname, $body);
 		});
 
@@ -168,8 +168,15 @@ class HarvestBibsys extends Command {
 				Log::info('Got resumption token: ' . $resumptionToken);
 				file_put_contents(storage_path('resumption_token'), $resumptionToken); 
 			}
-			if ($records->key() > $this->progress->getStep() && $records->key() <= $this->progress->getMaxSteps()) {
-				$this->progress->setCurrent($records->key());
+
+			$currentIndex = $records->key()
+					- count($records->getLastResponse()->records); // since Bibsys can't count right :D
+
+			if (is_file(storage_path("harvest/tmp.xml"))) {
+				rename(storage_path("harvest/tmp.xml"), storage_path(sprintf("harvest/f_%08d.xml", $currentIndex)));
+				if ($currentIndex > $this->progress->getStep() && $currentIndex <= $this->progress->getMaxSteps()) {
+					$this->progress->setCurrent($currentIndex);
+				}
 			}
 
 
