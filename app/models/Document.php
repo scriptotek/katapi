@@ -285,7 +285,13 @@ class Document extends BaseModel {
 
             if (!$fnd) {
                 $classification['_id'] = new MongoId;   // Pre-allocate ID
-                $toCreate[] = $classification;
+                 // Only include allowed properties:
+                $newItem = array(
+                    'system' => $classification['system'],
+                    'edition' => $classification['edition'],
+                    'number' => $classification['number'],
+                );
+                $toCreate[] = $newItem;
                 $results[] = $classification;
                 $instance = $classification;
             }
