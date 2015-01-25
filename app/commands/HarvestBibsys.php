@@ -104,25 +104,30 @@ class HarvestBibsys extends Command {
 		// $oaiSet = 'urealSamling42';
 	}
 
+	protected $errorCount = 0;
+
+	protected function errorMsg($value)
+	{
+		$this->errorCount++;
+		$dt = strftime('%Y-%m-%d %H:%M:%S');
+		Log::error('Harvest error ' . $this->errorCount . ': ' . $value);
+		$this->output->writeln($dt . ' Error no. ' . $this->errorCount . ': <error>' . $value . '</error>');
+	}
+
 	/**
 	 * Harvest records using the OaiClient
 	 */
 	public function harvest($url, $startDate, $untilDate, $oaiSet, $resumptionToken = null)
 	{
 
-		$counts = array(
-			'added' => 0,
-			'changed' => 0,
-			'removed' => 0,
-			'unchanged' => 0,
-			'errored' => 0
-		);
+		$recordsHarvested = 0;
+		$t0 = $t1 = microtime(true) - 1;
 
 		$client = new OaiClient($url, array(
 			'schema' => 'marcxchange',
 			'user-agent' => 'KatApi/0.1',
-			'max-retries' => 100,
-            'sleep-time-on-error' => 45,
+			'max-retries' => 1000,
+            'sleep-time-on-error' => 60,
 		));
 
 		if (!file_exists(storage_path('harvest'))) {
@@ -130,9 +135,7 @@ class HarvestBibsys extends Command {
 		}
 
 		$client->on('request.error', function($err) {
-			if (isset($this->progress)) $this->progress->clear();
-			$this->output->writeln("\n<error>" . $err . '</error>');
-			if (isset($this->progress)) $this->progress->display();
+			$this->errorMsg($err);
 		});
 
 		$client->on('request.complete', function($verb, $args, $body) {
@@ -148,9 +151,9 @@ class HarvestBibsys extends Command {
 			$resumptionToken
 		);
 
-		$this->progress = new ProgressBar($this->output, $records->numberOfRecords);
-		$this->progress->setFormat('Harvesting: %current%/%max% [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory:6s%');
-		$this->progress->start();
+		// $this->progress = new ProgressBar($this->output, $records->numberOfRecords);
+		// $this->progress->setFormat('Harvesting: %current%/%max% [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory:6s%');
+		// $this->progress->start();
 
 		// $resumptionToken = '';
 		while (true) {
@@ -159,13 +162,11 @@ class HarvestBibsys extends Command {
 				break 1;
 			}
 			$record = $records->current();
+			$recordsHarvested++;
 
-			$status = 'changed'; // dummy
-
-			$counts[$status]++;
 			if ($resumptionToken != $records->getResumptionToken()) {
 				$resumptionToken = $records->getResumptionToken();
-				Log::info('Got resumption token: ' . $resumptionToken);
+				// Log::info('Got resumption token: ' . $resumptionToken);
 				file_put_contents(storage_path('resumption_token'), $resumptionToken); 
 			}
 
@@ -174,9 +175,37 @@ class HarvestBibsys extends Command {
 
 			if (is_file(storage_path("harvest/tmp.xml"))) {
 				rename(storage_path("harvest/tmp.xml"), storage_path(sprintf("harvest/f_%08d.xml", $currentIndex)));
-				if ($currentIndex > $this->progress->getStep() && $currentIndex <= $this->progress->getMaxSteps()) {
-					$this->progress->setCurrent($currentIndex);
+			}
+
+			$batch = 100;
+			if ($recordsHarvested % $batch == 0) {
+				$dt = microtime(true) - $t1;
+				$dt2 = microtime(true) - $t0;
+				$mem = round(memory_get_usage()/1024/102.4)/10;
+				$t1 = microtime(true);
+				$percentage = $recordsHarvested / $records->numberOfRecords;
+				$eta = '';	
+				if ($percentage < 1.0) {
+					$et = $dt2 / $percentage - $dt2;
+					$h = floor($et / 3600);
+					$m = floor(($et - ($h * 3600)) / 60);
+					$s = round($et - $h * 3600 - $m * 60);
+					$eta = 'ETA: ' . sprintf("%02d:%02d:%02d", $h, $m, $s) . ', ';
 				}
+				$recsPerSecCur = $batch/$dt;
+				$recsPerSec = $recordsHarvested / $dt2;
+
+				$this->info(sprintf(
+					'Harvested %d of about %d records (%.2f %%), %sCurrent speed: %.1f recs/s, Avg speed: %.1f recs/s, Mem: %.1f MB.',
+					$recordsHarvested,
+					$records->numberOfRecords,
+					$percentage * 100,
+					$eta,
+					$recsPerSecCur,
+					$recsPerSec,
+					$mem,
+					$recordsHarvested
+				));
 			}
 
 
@@ -189,14 +218,15 @@ class HarvestBibsys extends Command {
 					// OAI-PMH servers really shouldn't throw
 					// random errors now and then, but some do...
 					$attempt++;
-					if ($attempt > 50) {
+					$this->errorMsg('Bad request. Attempt ' . $attempt . ' of 500. Sleeping 60 secs.');
+					if ($attempt > 500) {
 						throw $e;
 					}
-					sleep(30);
+					sleep(60);
 				}
 			}
 		}
-		$this->progress->finish();
+		// $this->progress->finish();
 
 		// TODO: Purge any subjects in the database that are not in the RDF...
 
@@ -218,9 +248,9 @@ class HarvestBibsys extends Command {
 		$bibsys_id = $record->data->text('.//marc:record[@type="Bibliographic"]/marc:controlfield[@tag="001"]');
 		if (strlen($bibsys_id) != 9) {
 			Log::error("[$record->identifier] Invalid record id: $bibsys_id");
-			$this->progress->clear();
+			// $this->progress->clear();
 			$this->output->writeln("\n<error>[$record->identifier] Invalid record id: $bibsys_id</error>");
-			$this->progress->display();
+			// $this->progress->display();
 			return 'errored';
 		}
 
@@ -239,9 +269,9 @@ class HarvestBibsys extends Command {
 		} catch (Exception $e) {
 			Log::error("[$record->identifier] Import failed: Invalid record. Exception '" . $e->getMessage() . "' in: " . $e->getFile() . ":" . $e->getLine() . "\nStack trace:\n" . $e->getTraceAsString());
 			   //kk var_export($e->getTrace(), true) );
-			$this->progress->clear();
+			// $this->progress->clear();
 			$this->output->writeln("\n<error>[$record->identifier] Import failed: Invalid record, see log for details.</error>");
-			$this->progress->display();
+			// $this->progress->display();
 			return 'errored';
 		}
 		if (!isset($doc->sets)) {
