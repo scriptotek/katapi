@@ -1,6 +1,6 @@
 
 // Declare app level module which depends on filters, and services
-angular.module('katapi', ['ngRoute', 'infinite-scroll', 'katapi.api', 'katapi.welcome', 'katapi.documents', 'katapi.subjects'])
+angular.module('katapi', ['ngRoute', 'infinite-scroll', 'katapi.api', 'katapi.welcome', 'katapi.documents', 'katapi.subjects', 'katapi.classes'])
 
 // Setup routes
 .config(['$routeProvider', '$locationProvider', function($routeProvider, $locationProvider) {
@@ -54,6 +54,25 @@ angular.module('katapi', ['ngRoute', 'infinite-scroll', 'katapi.api', 'katapi.we
         subjects: ['$route', 'Subjects', function ($route, Subjects) {
           console.log('Fetch subject: ' + $route.current.params.id);
           return Subjects.get([{id: $route.current.params.id}]);  // Returns promise
+        }]
+      }
+    })
+
+    .when('/classes', {
+      templateUrl: '/app/templates/classes/search.html',
+      controller: 'ClassesController'
+    })
+    .when('/classes/:id', {
+      templateUrl: '/app/templates/classes/show.html',
+      controller: 'ClassController',
+      // http://stackoverflow.com/a/19213892
+      resolve: {
+        // An optional map of dependencies which should be injected into the controller.
+        // If any of these dependencies are promises, the router will wait for them all
+        // to be resolved or one to be rejected before the controller is instantiated.
+        classes: ['$route', 'Classes', function ($route, Classes) {
+          console.log('Fetch class: ' + $route.current.params.id);
+          return Classes.get([{id: $route.current.params.id}]);  // Returns promise
         }]
       }
     })

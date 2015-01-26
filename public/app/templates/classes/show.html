@@ -1,0 +1,48 @@
+
+<div ng-show="!classification">
+    ...
+</div>
+
+<div ng-show="classification && classification.error">
+    {{classification.error}}
+</div>
+
+<div ng-show="classification && !classification.error">
+
+    <div style="float: right;">
+        <a target="_self" ng-href="/classes/{{ classification._id }}.json">[JSON]</a>
+    </div>
+
+    <h2>
+        <span style="color:#AAA;">Class:</span> {{ classification.number }}
+    </h2>
+
+    <table class="table">
+        <tr>
+            <td>
+                Scheme:
+            </td>
+            <td>
+                {{classification.system}}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Edition:
+            </td>
+            <td>
+                {{ classification.edition }}
+                <em ng-show="!classification.edition">Not specified</em>
+            </td>
+        </tr>
+    </table>
+
+    <h3>Documents</h3>
+    <ul>
+        <li ng-repeat="doc in classification.documents">
+            <a href="{{ doc.link }}">{{ doc.title }}</a>
+            ({{doc.edition}} {{doc.year}})
+        </li>
+    </ul>
+
+</div>

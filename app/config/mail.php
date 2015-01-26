@@ -80,7 +80,7 @@ return array(
 	|
 	*/
 
-	'username' => $_ENV['SMTP_USER'],
+	'username' => array_get($_ENV, 'SMTP_USER'),
 
 	/*
 	|--------------------------------------------------------------------------
@@ -93,7 +93,7 @@ return array(
 	|
 	*/
 
-	'password' => $_ENV['SMTP_PASS'],
+	'password' => array_get($_ENV, 'SMTP_PASS'),
 
 	/*
 	|--------------------------------------------------------------------------

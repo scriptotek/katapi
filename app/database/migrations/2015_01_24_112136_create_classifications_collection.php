@@ -3,7 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Jenssegers\Mongodb\Schema\Blueprint;
 
-class CreateSubjectsCollection extends Migration {
+class CreateClassificationsCollection extends Migration {
 
 	/**
 	 * Run the migrations.
@@ -12,8 +12,8 @@ class CreateSubjectsCollection extends Migration {
 	 */
 	public function up()
 	{
-		Schema::create('subjects', function(Blueprint $collection) {
-		    $collection->unique(array('vocabulary', 'indexTerm'));
+		Schema::create('classifications', function(Blueprint $collection) {
+		    $collection->unique(array('system', 'edition', 'number'));
 		});
 	}
 
@@ -25,7 +25,7 @@ class CreateSubjectsCollection extends Migration {
 	 */
 	public function down()
 	{
-		Schema::drop('subjects');
+		Schema::drop('classifications');
 	}
 
 }

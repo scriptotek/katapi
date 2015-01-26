@@ -10,6 +10,7 @@ html {
 }
 body {
   background-color: #ebe8e1;
+  background: url(/textures/cubes.png);
   font-family: 'Open Sans', sans-serif;
 }
 .container .inner {

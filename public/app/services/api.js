@@ -28,6 +28,8 @@ angular.module('katapi.api', ['katapi.documents'])
 
   this.search = function(query, nextRecordPosition) {
 
+    if (!nextRecordPosition) nextRecordPosition = 1;
+
     console.log('[LocalApi] Searching for: ' + query + ', starting at ' + nextRecordPosition);
 
     var deferred = $q.defer();

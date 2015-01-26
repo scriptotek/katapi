@@ -37,8 +37,7 @@ ClassLoader::addDirectories(array(
 
 Log::useFiles(storage_path().'/logs/laravel.log');
 
-
-if (Config::get('database.papertrail.enable')) {
+if (Config::get('database.papertrail.enable') === true) {
 
 	$logger = Log::getMonolog();
 
@@ -72,9 +71,12 @@ if (Config::get('database.papertrail.enable')) {
 |
 */
 
-function myExceptionHandler(Exception $exception, $code) {
-	$c = new BaseController;
-	return $c->abort($code, $exception->getMessage());
+if (!function_exists('myExceptionHandler'))
+{
+	function myExceptionHandler(Exception $exception, $code) {
+		$c = new BaseController;
+		return $c->abort($code, $exception->getMessage());
+	}
 }
 
 App::error(function(Exception $exception, $code)

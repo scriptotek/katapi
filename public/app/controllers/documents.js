@@ -30,7 +30,10 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
         });
       }
       if (doc.classifications) {
+        var existing = [];
         doc.classifications.forEach(function(subj) {
+          if (existing.indexOf(subj.link) != -1) return;  // skip dups
+          existing.push(subj.link);
           if (!q[subj.system]) q[subj.system] = [];
           q[subj.system].push({
             link: subj.link,
@@ -40,7 +43,7 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
           });
         });
       }
-      if (doc.bibliographic.isbns) {
+      if (doc.bibliographic && doc.bibliographic.isbns) {
         doc.bibliographic.isbns = unique(doc.bibliographic.isbns.map(ISBN.hyphenate));
       }
       doc.subjectsAndClasses = q;
@@ -88,11 +91,11 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
       }
 
       function onFail(err) {
-        var msg = 'Load failed';
+        var msg = 'Unknown error';
         if (err.data && err.data.error && err.data.error.message) {
-          msg = err.data.error.message;
+          msg = err.data.error.code + ' ' + err.data.error.message;
         }
-        docs.push({error: msg});
+        docs.push({ error: msg });
         done();
       }
 
@@ -107,12 +110,48 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
 
 }])
 
-.controller('DocumentsController', ['$scope', '$location', 'LocalApi', function($scope, $location, LocalApi) {
+
+.factory('Reference', [function() {
+  return {
+    // http://www.loc.gov/standards/sourcelist/subject.html
+    // http://www.loc.gov/standards/sourcelist/classification.html
+    vocabularies: {
+      null: 'Frie nøkkelord',
+      'agrovoc': 'Agrovoc',
+      'noubomn': 'Realfagstermer',
+      'humord': 'Humord',
+      'tekord': 'Tekord',
+      'ordnok': 'Ordnøkkelen',
+      'lcsh': 'Library of Congress Subject Headings',
+      'mesh': 'MeSH',
+      'psychit': 'APA Thesaurus of psychological index terms',
+      'acmccs': 'CCS',
+      'ddc': 'DDC',
+      'no-ureal-ca': 'Astrofysisk hylleoppstilling',
+      'no-ureal-cb': 'Biologisk hylleoppstilling',
+      'no-ureal-cg': 'Geofysisk hylleoppstilling',
+      'inspec': 'INSPEC',
+      'msc': 'MSC',
+      'nlm': 'NLM-klassifikasjon',
+      'oosk': 'UBB-klassifikasjon',
+      'udc': 'UDC',
+      'utk': 'UBO-klassifikasjon',
+      'NO-TrBIB': 'Omtalt'
+    }
+  };
+
+}])
+
+.controller('DocumentsController', ['$scope', '$location', 'LocalApi', 'Reference', function($scope, $location, LocalApi, Reference) {
   console.log('[DocumentsController] Hello');
 
-  $scope.query = $location.search().q;
+  $scope.query = {};
 
-  $scope.show = { 
+  $scope.query.q = $location.search().q;
+
+  $scope.vocabularies = Reference.vocabularies;
+
+  $scope.query.show = { 
     indexing: false,
     series: false,
     notes: false,
@@ -130,9 +169,8 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
     LocalApi.search(query, nextRecordPosition).then(function(results) {
       console.log('[DocumentsController] Server returned ' + results.documents.length + ' results');
       // console.log(results);
-      Array.prototype.push.apply($scope.docs, results.documents);
-      $scope.numberOfRecords = results.numberOfRecords;
-      $scope.nextRecordPosition = results.nextRecordPosition;
+      Array.prototype.unshift.apply(results.documents, $scope.results.documents);
+      $scope.results = results;
       $scope.busy = false;
     }, function(error) {
       $scope.error = error ? error : 'Søket gikk ut i feil';
@@ -142,8 +180,8 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
 
   function showToString() {
     var s = [];
-    for (var key in $scope.show) {
-      if ($scope.show.hasOwnProperty(key) && $scope.show[key]) {
+    for (var key in $scope.query.show) {
+      if ($scope.query.show.hasOwnProperty(key) && $scope.query.show[key]) {
         s.push(key);
       }
     }
@@ -152,39 +190,41 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
 
   function showFromString(s) {
     s = s.split(',');
-    for (var key in $scope.show) {
-      if ($scope.show.hasOwnProperty(key)) {
-        $scope.show[key] = (s.indexOf(key) != -1);
+    for (var key in $scope.query.show) {
+      if ($scope.query.show.hasOwnProperty(key)) {
+        $scope.query.show[key] = (s.indexOf(key) != -1);
       }
     }
   }
 
   $scope.search = function() {
     $location.path('/documents').search({
-      'q': $scope.query,
-      'continue': $scope.nextRecordPosition,
+      'q': $scope.query.q,
+      'continue': $scope.results.nextRecordPosition,
       'show': showToString()
     });
   };
 
-  $scope.docs = [];
-  $scope.numberOfRecords = 0;
-  $scope.nextRecordPosition = 1;
+  $scope.results = {
+    numberOfRecords: -1,
+    nextRecordPosition: 1,
+    documents: []
+  };
 
   //getSearch($scope.query, $scope.nextRecordPosition);
 
   $scope.moreResults = function() {
-    if ($scope.nextRecordPosition) {
+    if ($scope.results.nextRecordPosition) {
       console.log('[DocumentsController] Fetch more results');
-      getSearch($scope.query, $scope.nextRecordPosition);
+      getSearch($scope.query.q, $scope.results.nextRecordPosition);
     } else {
-      console.log('[DocumentsController] Reached end of list');
+      // console.log('[DocumentsController] Reached end of list');
     }
   };
 
 }])
 
-.controller('DocumentController', ['$scope', 'docs', function($scope, docs) {
+.controller('DocumentController', ['$scope', 'docs', 'Reference', function($scope, docs, Reference) {
   console.log('Hello from DocumentController');
   console.log('We got ' + docs.length + ' documents');
 
@@ -230,29 +270,7 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
     }
   };
 
-  // http://www.loc.gov/standards/sourcelist/subject.html
-  // http://www.loc.gov/standards/sourcelist/classification.html
-  $scope.vocabularies = {
-    'noubomn': 'Realfagstermer',
-    'humord': 'Humord',
-    'tekord': 'Tekord',
-    'ordnok': 'Ordnøkkelen',
-    'lcsh': 'Library of Congress Subject Headings',
-    'mesh': 'MeSH',
-    'psychit': 'APA Thesaurus of psychological index terms',
-    'acmccs': 'CCS',
-    'ddc': 'DDC',
-    'no-ureal-ca': 'Astrofysisk hylleoppstilling',
-    'no-ureal-cb': 'Biologisk hylleoppstilling',
-    'no-ureal-cg': 'Geofysisk hylleoppstilling',
-    'inspec': 'INSPEC',
-    'msc': 'MSC',
-    'nlm': 'NLM-klassifikasjon',
-    'oosk': 'UBB-klassifikasjon',
-    'udc': 'UDC',
-    'utk': 'UBO-klassifikasjon',
-    'NO-TrBIB': 'Omtalt'
-  };
+  $scope.vocabularies = Reference.vocabularies;
 
   // http://www.loc.gov/standards/sourcelist/descriptive-conventions.html
   $scope.catalogingRules = {
@@ -282,11 +300,23 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
       //console.log(element);
       //console.log(attrs);
 
+      function sorted(docs) {
+        return docs.sort(function(a, b) {
+          if (a.bibliographic.year == b.bibliographic.year) {
+            if (a.bibliographic.part_no == b.bibliographic.part_no) {
+              return 0;
+            }
+            return a.bibliographic.part_no > b.bibliographic.part_no ? 1 : -1;
+          }
+          return a.bibliographic.year > b.bibliographic.year ? 1 : -1;
+        });
+      }
+
       function fetch(id) {
         console.log('Fetching volumes for: ' + id);
-        LocalApi.search('bs.serieobjektid=' + id).then(function(results) {
+        LocalApi.search('series:' + id).then(function(results) {
           console.log(results);
-          scope.volumes = results.documents;
+          scope.volumes = sorted(results.documents);
         });
       }
 
@@ -317,11 +347,12 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
 
       function fetch(id, part) {
         scope.bibsys_id = id;
-        console.log('Fetching work title');
         LocalApi.search('bs.objektid=' + id).then(function(results) {
+          console.log('Found work:');
           console.log(results);
           // console.log('setting ' + scope.title);
-          scope.title = results.documents[0].title;
+          scope.id = results.documents[0]._id;
+          scope.title = results.documents[0].bibliographic.title;
           scope.part = part;
         });
       }

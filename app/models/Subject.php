@@ -47,14 +47,16 @@ class Subject extends BaseModel {
      *
      * @var array
      */
-    protected $appends = array('documents', 'link');
+    protected $appends = array('link');
 
     /**
-     * Accessor for the virtual 'documents' attribute
+     * Method to get documents. We're not using an accessor here, since
+     * we don't want the overhead of fetching documents when serializing
+     * the subject as an array using toArray().
      *
      * @return array
      */
-    function getDocumentsAttribute()
+    public function getDocuments()
     {
         return $this->getRelatedDocuments('subjects');
     }
