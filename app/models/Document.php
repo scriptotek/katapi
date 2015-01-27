@@ -450,7 +450,7 @@ class Document extends BaseModel {
                 ));
                 $q = DB::collection($attr);
                 foreach ($identifiers[$attr] as $id) {
-                    $q->where($id, $x['new'][$id]);
+                    $q->where($id, '=', $x['new'][$id]);
                 }
                 $q->update($fields);
             }
