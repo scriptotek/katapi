@@ -14,6 +14,7 @@ class CreateDocumentsCollection extends Migration {
 	{
 		Schema::create('documents', function(Blueprint $collection) {
 			$collection->unique('bibliographic.id');
+			$collection->index('bibliographic.isbns');
 			$collection->index('holdings.id');
 			$collection->index('holdings.barcode');
 
