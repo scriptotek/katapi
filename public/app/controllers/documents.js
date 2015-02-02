@@ -23,6 +23,7 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
         doc.subjects.forEach(function(subj) {
           if (!q[subj.vocabulary]) q[subj.vocabulary] = [];
           q[subj.vocabulary].push({
+            type: 'subject',
             link: subj.link,
             term: subj.indexTerm,
             extras: []
@@ -36,6 +37,7 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
           existing.push(subj.link);
           if (!q[subj.system]) q[subj.system] = [];
           q[subj.system].push({
+            type: 'class',
             link: subj.link,
             term: subj.number,
             edition: subj.edition,
@@ -122,7 +124,7 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
       'humord': 'Humord',
       'tekord': 'Tekord',
       'ordnok': 'Ordnøkkelen',
-      'lcsh': 'Library of Congress Subject Headings',
+      'lcsh': 'LCSH',
       'mesh': 'MeSH',
       'psychit': 'APA Thesaurus of psychological index terms',
       'acmccs': 'CCS',
@@ -152,13 +154,15 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
   $scope.vocabularies = Reference.vocabularies;
 
   $scope.query.show = { 
-    indexing: false,
-    series: false,
-    notes: false,
-    holdings: false
+    sh: false,
+    k: false,
+    c: false,
+    se: false,
+    n: false,
+    h: false
   };
 
-  showFromString($location.search().show ? $location.search().show : 'indexing,series,notes');
+  showFromString($location.search().show ? $location.search().show : 'sh');
 
   function getSearch(query, nextRecordPosition) {
 
