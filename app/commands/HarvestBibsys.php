@@ -209,19 +209,19 @@ class HarvestBibsys extends Command {
 			}
 
 
+			$attempt = 1;
 			while (true) {
-				$attempt = 1;
 				try {
 					$records->next();
 					break 1;
 				} catch (Scriptotek\Oai\BadRequestError $e) {
 					// OAI-PMH servers really shouldn't throw
 					// random errors now and then, but some do...
-					$attempt++;
 					$this->errorMsg('Bad request. Attempt ' . $attempt . ' of 500. Sleeping 60 secs.');
 					if ($attempt > 500) {
 						throw $e;
 					}
+					$attempt++;
 					sleep(60);
 				}
 			}
