@@ -47,7 +47,7 @@ class SearchEngine {
 
         // Very temporary solution:
         if (preg_match('/^id:([0-9a-z-, ]+)$/i', $query->getQueryString(), $matches)) {
-            $id = str_replace('-', '', strtolower($matches[1]));
+            $id = str_replace('-', '', $matches[1]);
             $ids = explode(',', $id);
             $isbn = new Isbn;
             $q = [];
@@ -55,13 +55,15 @@ class SearchEngine {
             {
                 $id = trim($id);
                     if (strlen($id) == 9) {
-                    $q[] = ['holdings.id' => $id];
-                    $q[] = ['holdings.barcode' => $id];
-                    $q[] = ['bibliographic.id' => $id];
+                    $q[] = ['holdings.id' => strtolower($id)];
+                    $q[] = ['holdings.barcode' => strtolower($id)];
+                    $q[] = ['bibliographic.id' => strtoupper($id)];
                 } elseif (strlen($id) == 10) {
+                    $id = strtoupper($id);
                     $q[] = ['bibliographic.isbns' => $id];
                     $q[] = ['bibliographic.isbns' => $isbn->translate->to13($id)];
                 } elseif (strlen($id) == 13) {
+                    $id = strtoupper($id);
                     $q[] = ['bibliographic.isbns' => $id];
                     $q[] = ['bibliographic.isbns' => $isbn->translate->to10($id)];
                 }
