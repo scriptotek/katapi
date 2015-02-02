@@ -23,6 +23,9 @@ class CreateDocumentsCollection extends Migration {
 			// null values for the id fields, otherwise we'd gain nothing.
 			$collection->index('holdings.part_of.id');
 			$collection->index('holdings.series.id');
+
+			$collection->index('subjects.internal_id');
+			$collection->index('classifications.internal_id');
 		});
 	}
 
