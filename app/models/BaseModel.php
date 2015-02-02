@@ -14,7 +14,7 @@ class BaseModel extends Eloquent{
             if (is_array($val)) {
                 $attributes[$key] = $this->flattenDates($val);
             } elseif (in_array($key, $dateFields, true)) {
-                $attributes[$key] = (string) $this->asDateTime($attributes[$key]);
+                $attributes[$key] = is_null($attributes[$key]) ? null : (string) $this->asDateTime($attributes[$key]);
             }
         }
         return $attributes;
