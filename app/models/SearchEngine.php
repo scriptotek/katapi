@@ -17,6 +17,16 @@ class SearchEngine {
         );
     }
 
+    protected function error($msg) {
+
+        return array(
+            'error' => $msg,
+            'numberOfRecords' => 0,
+            'documents' => [],
+            'query_engine' => 'local',
+        );
+    }
+
     public function ask(Query $query) {
 
         $map = array(
@@ -55,6 +65,9 @@ class SearchEngine {
                     $q[] = ['bibliographic.isbns' => $id];
                     $q[] = ['bibliographic.isbns' => $isbn->translate->to10($id)];
                 }
+            }
+            if (count($q)) {
+                return $this->error('No valid IDs given');
             }
             $q = ['$or' => $q];
 
