@@ -66,8 +66,8 @@ class SearchEngine {
                     $q[] = ['bibliographic.isbns' => $isbn->translate->to10($id)];
                 }
             }
-            if (count($q)) {
-                return $this->error('No valid IDs given');
+            if (!count($q)) {
+                return $this->error('No valid ID given');
             }
             $q = ['$or' => $q];
 
