@@ -216,12 +216,13 @@ class Document extends BaseModel {
 			if (isset($holding['acquired'])) {
 				$holding['acquired'] = $this->fromDateTime($holding['acquired']);
 			} else {
+                $holding['acquired'] = null;
                 // Get year from DOKID
-                $yr = 1900 + intval(substr($holding['id'], 0, 2));
-                if ($yr < 1920) {
-                    $yr += 100;
-                }
-                $holding['acquired'] = $this->fromDateTime(strval($yr) . '-01-01 00:00:00');
+                // $yr = 1900 + intval(substr($holding['id'], 0, 2));
+                // if ($yr < 1920) {
+                //     $yr += 100;
+                // }
+                // $holding['acquired'] = $this->fromDateTime(strval($yr) . '-01-01 00:00:00');
             }
 
             $out[] = $holding;
