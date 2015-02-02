@@ -22,6 +22,7 @@ Route::get('/', function()
 
 # /documents
 Route::get('documents', 'DocumentsController@getIndex');
+Route::get('documents.json', 'DocumentsController@getIndex');
 Route::get('documents/{id}', 'DocumentsController@getShow')
     ->where(array('id' => '[0-9a-z.]+'));
 
