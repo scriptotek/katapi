@@ -10,6 +10,7 @@ services:
 
 before_script:
  - composer self-update
+ - php -i | grep 'Mongo'
  - composer install --dev -o -n
  - php artisan migrate:install --env="testing"
 
