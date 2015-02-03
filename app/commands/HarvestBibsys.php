@@ -226,11 +226,8 @@ class HarvestBibsys extends Command {
 				}
 			}
 		}
-		// $this->progress->finish();
 
-		// TODO: Purge any subjects in the database that are not in the RDF...
-
-		$this->output->writeln(sprintf('%d records added, %d records changed, %d records removed, %d errored, %d records unchanged', $counts['added'], $counts['changed'], $counts['removed'], $counts['errored'], $counts['unchanged']));
+		$this->output->writeln(sprintf('Harvest completed. Got %d records', $recordsHarvested));
 
 		return true;
 	}
