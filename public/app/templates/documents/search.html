@@ -4,7 +4,7 @@
 
   <form class="searchForm" ng-submit="search()" ng-class="{busy:busy}">
     <!--<label for="query">CQL:</label>-->
-    <input type="text" id="query" ng-model="query" name="query">
+    <input type="text" id="query" ng-model="query.q" name="query">
     <a href="#" class="clearSearch" title="Tøm søk" ng-click="query=''">
       <i class="fa fa-times"></i>
     </a>
@@ -12,33 +12,48 @@
   </form>
   <p>
     Søkebyggesteiner:
-    <a ng-click='query = query + " bs.tittel-ord=\"top quark\""'>bs.tittel-ord="top quark"</a>
+    <a ng-click='query.q = query.q + " bs.tittel-ord=\"top quark\""'>bs.tittel-ord="top quark"</a>
     •
-    <a ng-click='query = query + " bs.lokoeo-frase=\"Sild\" AND bs.avdeling=\"ureal?\""'>bs.lokoeo-frase="Sild" AND bs.avdeling="ureal?"</a>
+    <a ng-click='query.q = query.q + " bs.lokoeo-frase=\"Sild\" AND bs.avdeling=\"ureal?\""'>bs.lokoeo-frase="Sild" AND bs.avdeling="ureal?"</a>
     •
-    <a ng-click='query = query + " sortBy bs.aar/sort.descending"'>sortBy bs.aar/sort.descending</a>
+    <a ng-click='query.q = query.q + " sortBy bs.aar/sort.descending"'>sortBy bs.aar/sort.descending</a>
 
   </p>
 
   Vis:
-  <label><input type="checkbox" ng-model="show.indexing"> emner og klasser</label>
-  <label><input type="checkbox" ng-model="show.series"> serier</label>
-  <label><input type="checkbox" ng-model="show.notes"> noter</label>
-  <label><input type="checkbox" ng-model="show.holdings"> beholdning</label>
+  <label><input type="checkbox" ng-model="query.show.sh"> kontrollerte emneord</label>
+  <label><input type="checkbox" ng-model="query.show.k"> frie emneord</label>
+  <label><input type="checkbox" ng-model="query.show.c"> klassifikasjon</label>
+  <label><input type="checkbox" ng-model="query.show.se"> serier</label>
+  <label><input type="checkbox" ng-model="query.show.n"> noter</label>
+  <label><input type="checkbox" ng-model="query.show.h"> beholdning</label>
 
   <hr>
+  <div style="float: right;">
+    <a target="_self" ng-href="/documents.json?q={{ query.q }}">[JSON]</a>
+  </div>
 
-  <div ng-show="numberOfRecords" style="margin:.5em 0; padding: .5em;">
-    {{ numberOfRecords ? numberOfRecords : 'Ingen' }} dokumenter funnet.
-    Viser {{ docs.length }}.
+  <div ng-show="results.numberOfRecords != -1" style="margin:.5em 0; padding: .5em;">
+    <span ng-show="results.numberOfRecords == 0">Ingen dokumenter ble funnet.</span>
+    <span ng-show="results.numberOfRecords == 1">Ett dokument ble funnet.</span>
+    <span ng-show="results.numberOfRecords > 1">{{ results.numberOfRecords }} dokumenter ble funnet.</span>
+    <span ng-show="results.numberOfRecords == results.documents.length">Viser alle.</span>
+    <span ng-show="results.numberOfRecords != results.documents.length">Viser {{ results.documents.length }}.</span>
     <span ng-show="busy">Henter flere...</span>
+    <span ng-show="results.query_engine == 'local'">
+      Spørringen ble behandlet lokalt.
+    </span>
+    <span ng-show="results.query_engine == 'remote'">
+      Spørringen ble ikke forstått lokalt, og ble derfor videresendt til Bibsys.
+    </span>
   </div>
     
   <ul class="searchResults fa-ul" infinite-scroll="moreResults()" infinite-scroll-disabled="busy" infinite-scroll-distance="4">
 
-    <li ng-repeat="doc in docs">
-      <i class="fa-li fa fa-angle-double-right"></i>
+    <li ng-repeat="doc in results.documents">
+
       <h3>
+        <div style="font-size:11px; font-family:monospace; color: #999; float:right; padding-left: 10px;"> {{ doc.bibliographic.id }} </div>
         <a ng-href="/documents/{{ doc._id }}">{{ doc.bibliographic.title }}{{
           doc.bibliographic.part_no ? ' – ' + doc.bibliographic.part_no : '' 
         }}</a>{{
@@ -50,22 +65,24 @@
       <!--
         EMNER OG KLASSER
         -->
-      <div ng-show="show.indexing">
         <div class="subjectSystem" ng-repeat="(voc, items) in doc.subjectsAndClasses">
-          <span style="color: #888">
-            <i class="fa fa-tags"></i>
-            {{ vocabularies[voc] || voc }}:
-          </span>
-          <ul>
-            <li ng-repeat="itm in items">
-              <a class="subject" ng-href="{{ itm.link }}"> {{ itm.term }}</a>
-              <span style="color:#888;" ng-show="itm.extras">
-                (<!--{{ implode(', ', $itm['extras']) }}-->)
-              </span>
-            </li>
-          </ul>
+
+
+          <div ng-show="(voc === 'null' && query.show.k) || (voc !== 'null' && (items[0].type == 'subject' && query.show.sh) || (items[0].type == 'class' && query.show.c))">
+            <span style="color: #888">
+              <i class="fa fa-tags"></i>
+              {{ vocabularies[voc] || voc }}:
+            </span>
+            <ul>
+              <li ng-repeat="itm in items">
+                <a class="subject" ng-href="{{ itm.link }}"> {{ itm.term }}</a>
+                <span style="color:#888;" ng-show="itm.extras">
+                  (<!--{{ implode(', ', $itm['extras']) }}-->)
+                </span>
+              </li>
+            </ul>
+          </div>
         </div>
-      </div>
 
       <!--
         SERIER OG NOTER
@@ -73,7 +90,7 @@
 
       <ul class="seriesAndNotes">
 
-          <li ng-repeat="series in doc.bibliographic.series" ng-show="show.series">
+          <li ng-repeat="series in doc.bibliographic.series" ng-show="query.show.se">
                   <i class="fa fa-angle-double-up"></i> 
                   Del av serien: {{series.title}}
                   <span ng-show="series.volume">
@@ -84,7 +101,7 @@
                   </span>
               </li>
 
-              <li ng-show="show.series && doc.bibliographic.part_of">
+              <li ng-show="query.show.se && doc.bibliographic.part_of">
                   <i class="fa fa-angle-double-up"></i> 
                   Del av flerbindsverket: {{doc.bibliographic.part_of.title}}
                   <span ng-show="doc.bibliographic.part_of.volume">
@@ -92,7 +109,7 @@
                   </span>
               </li>
 
-              <li ng-show="show.series && doc.bibliographic.preceding">
+              <li ng-show="query.show.se && doc.bibliographic.preceding">
                 <i class="fa fa-angle-double-left"></i> 
                 {{doc.bibliographic.preceding.note}}
                 <span ng-show="!doc.bibliographic.preceding.note">
@@ -103,7 +120,7 @@
                 </span>
               </li>
 
-              <li ng-show="show.series && doc.bibliographic.succeeding">
+              <li ng-show="query.show.se && doc.bibliographic.succeeding">
                 <i class="fa fa-angle-double-right"></i> 
                 {{doc.bibliographic.succeeding.note}}
                 <span ng-show="!doc.bibliographic.succeeding.note">
@@ -114,13 +131,13 @@
                 </span>
               </li>
 
-              <li ng-repeat="note in doc.bibliographic.notes" ng-show="show.notes">
+              <li ng-repeat="note in doc.bibliographic.notes" ng-show="query.show.n">
                 <i class="fa fa-comment-o"></i> {{note}}
               </li>
 
             </ul>
 
-            <ul class="holdings" ng-show="show.holdings">
+            <ul class="holdings" ng-show="query.show.h">
                 <li ng-repeat="holding in doc.holdings">
                   <i class="fa fa-hand-o-right"></i> 
 

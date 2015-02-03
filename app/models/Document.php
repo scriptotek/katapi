@@ -32,6 +32,24 @@ class Document extends BaseModel {
 	protected $appends = array('link');
 
     /**
+     * Validation rules.
+     *
+     * @var array
+     */
+    public static $rules = array(
+        'bibliographic' => 'array',
+        'classifications' => 'array',
+        'subjects' => 'array',
+    );
+
+    /**
+     * Validation errors.
+     *
+     * @var Illuminate\Support\MessageBag
+     */
+    public $errors;
+
+    /**
      * Parse using SimpleMarcParser and separate bibliographic and holdings.
      *
      * @param QuiteSimpleXMLElement $data
@@ -68,7 +86,7 @@ class Document extends BaseModel {
         // Find existing Document or create a new one
         $doc = Document::where('bibliographic.id', '=', $biblio->id)->first();
         if (is_null($doc)) {
-            Log::info('CREATE document "' . $biblio->id . '"');
+            Log::info(sprintf('[%s] CREATE document', $biblio->id));
             $doc = new Document;
         } else {
             // Log::info('UPDATE document "' . $biblio->id . '"');
@@ -109,11 +127,17 @@ class Document extends BaseModel {
         if ($value instanceof BibliographicRecord) {
             $value = $value->toArray();
         } elseif (!is_array($value)) {
-            throw new Exception('Document.bibliographic was given an unknown datatype.');
+            throw new \Exception('Document.bibliographic was given an unknown datatype.');
         }
 
         // We maintain subjects and classifications in separate MongoDB collections
         if (isset($value['subjects'])) {
+            $value['subjects'] = array_map(function($x) {
+                $x['indexTerm'] = $x['term'];
+                unset($x['term']);
+                if (array_key_exists('id', $x)) unset($x['id']); // We could rename it if we need it in the future
+                return $x;
+            }, $value['subjects']);
             $this->subjects = $value['subjects'];
             unset($value['subjects']);
         }
@@ -170,7 +194,7 @@ class Document extends BaseModel {
             if ($holding instanceof HoldingsRecord) {
                 $holding = $holding->toArray();
             } elseif (!is_array($holding)) {
-                throw new Exception('Document.holdings was given an unknown datatype.');
+                throw new \Exception('Document.holdings was given an unknown datatype.');
             }
 
             // Ignore creation date of record, since Bibsys just set it to the current date
@@ -184,6 +208,7 @@ class Document extends BaseModel {
             }
 
             if (in_array($holding['id'], $ids)) {
+                Log::warning('Found duplicate holdings.id=' . $holding['id'] . ' for bibliographic.id=' . $this->bibliographic['id']);
                 // Filter out duplicates from Bibsys...
                 continue;
             }
@@ -191,12 +216,13 @@ class Document extends BaseModel {
 			if (isset($holding['acquired'])) {
 				$holding['acquired'] = $this->fromDateTime($holding['acquired']);
 			} else {
+                $holding['acquired'] = null;
                 // Get year from DOKID
-                $yr = 1900 + intval(substr($holding['id'], 0, 2));
-                if ($yr < 1920) {
-                    $yr += 100;
-                }
-                $holding['acquired'] = $this->fromDateTime(strval($yr) . '-01-01 00:00:00');
+                // $yr = 1900 + intval(substr($holding['id'], 0, 2));
+                // if ($yr < 1920) {
+                //     $yr += 100;
+                // }
+                // $holding['acquired'] = $this->fromDateTime(strval($yr) . '-01-01 00:00:00');
             }
 
             $out[] = $holding;
@@ -206,7 +232,10 @@ class Document extends BaseModel {
 	}
 
     /**
-     * Accessor for the 'classifications' attribute
+     * Accessor for the 'classifications' attribute. Note that this method does 
+     * not fetch data from the 'classifications' collection. The reason is that
+     * the method is called from toArray(), and when serializing many 
+     * documents, the number of queries needed would slow things down. 
      *
      * @param $value
      * @return array
@@ -234,98 +263,50 @@ class Document extends BaseModel {
      */
     public function setClassificationsAttribute($classifications)
     {
-        $out = array();
-        
-        $queryItems = array();
-        foreach ($classifications as $classification) {
-
-            if (!is_array($classification)) {
-                throw new Exception('Document.classifications was given an unknown datatype.');
-            }
-
-            if (isset($classification['internal_id'])) {
-
-                // Just undo the effect of getClassificationsAttribute
-                $classification['assigned'] = $this->fromDateTime($classification['assigned']);
-                $classification['internal_id'] = new MongoId($classification['internal_id']);
-                $out[] = $classification;
-
-            } else {
-
-                // Add to items to be queried
-                $queryItems[] = array('system' => $classification['system'], 'edition' => $classification['edition'], 'number' => $classification['number'], );
-            }
-        }
-
-        if (count($queryItems) == 0) {
-            $this->attributes['classifications'] = $out;
-            return;
-        }
-
-        // Go ahead and query the database
-        $query = array('$or' => $queryItems);
-        $results = Classification::whereRaw($query)->get();
-        $toCreate = array();
-
-        foreach ($classifications as $classification) {
-            if (isset($classification['internal_id'])) continue;
-
-            $fnd = false;
-
-            foreach ($results as $res) {
-
-                if ($classification['system'] == $res['system'] && $classification['edition'] == $res['edition'] && $classification['number'] == $res['number']) {
-                    $fnd = true;
-                    $instance = $res;
-
-                    // Q: Should we do some updating?
-
-                }
-            }
-
-            if (!$fnd) {
-                $classification['_id'] = new MongoId;   // Pre-allocate ID
-                 // Only include allowed properties:
-                $newItem = array(
-                    'system' => $classification['system'],
-                    'edition' => $classification['edition'],
-                    'number' => $classification['number'],
-                );
-                $toCreate[] = $newItem;
-                $results[] = $classification;
-                $instance = $classification;
-            }
-
-            $r = $this->getSubdocumentById('classifications', $instance['_id']);
-
-            if (is_null($r)) {
-                $r = array(
-                    'internal_id' => new MongoId($instance['_id']),
-                    'assigner' => $classification['assigner'],
-                    'assigned' => new MongoDate(),
-                );
-            }
-
-            $out[] = $r;
-
-        }
-
-        // Insert
-        if (count($toCreate) != 0) {
-
-            $classifications = array();
-            foreach ($toCreate as $classification) {
-                Log::info(sprintf('CREATE classification {system: "%s", number: "%s"}', $classification['system'], $classification['number']));
-                $classifications[] = $classification;
-            }
-            DB::collection('classifications')->insert($classifications);
-        }
-
-        $this->attributes['classifications'] = $out;
+        $this->attributes['classifications'] = $this->updateSubdocuments('classifications', $classifications);
     }
 
     /**
-     * Accessor for the 'subjects' attribute
+     * Method to get subjects, including data from the 'subjects' collection. 
+     *
+     * @return array
+     */
+    public function getSubjects()
+    {
+        $ids = array_unique(array_map(function($x) {
+            return strval($x['internal_id']);
+        }, $this->subjects));
+
+        $rel = $this->getExpandedRelations(array(
+            'subjects' => Subject::whereIn('_id', $ids)->get(),
+        ));
+
+        return $rel['subjects'];
+    }
+
+    /**
+     * Method to get classificatinos, including data from the 'classifications' collection. 
+     *
+     * @return array
+     */
+    public function getClassifications()
+    {
+        $ids = array_unique(array_map(function($x) {
+            return strval($x['internal_id']);
+        }, $this->classifications));
+
+        $rel = $this->getExpandedRelations(array(
+            'classifications' => Classification::whereIn('_id', $ids)->get(),
+        ));
+
+        return $rel['classifications'];
+    }
+
+    /**
+     * Accessor for the 'subjects' attribute. Note that this method does 
+     * not fetch data from the 'subjects' collection. The reason is that
+     * the method is called from toArray(), and when serializing many 
+     * documents, the number of queries needed would slow things down. 
      *
      * @param $value
      * @return array
@@ -346,6 +327,14 @@ class Document extends BaseModel {
     }
 
     /**
+     * Currently just a wrapper
+     */
+    public function setSubjects($subjects)
+    {
+        $this->subjects = $subjects;
+    }
+
+    /**
      * Mutator for the 'subjects' attribute
      *
      * @param $value
@@ -353,201 +342,135 @@ class Document extends BaseModel {
      */
     public function setSubjectsAttribute($subjects)
     {
-        $out = array();
+        $this->attributes['subjects'] = $this->updateSubdocuments('subjects', $subjects);
+    }
 
-        $queryItems = array();
-        foreach ($subjects as $subject) {
+    public function updateSubdocuments($attr, $items)
+    {
 
-            if (!is_array($subject)) {
-                throw new Exception('Document.subjects was given an unknown datatype.');
-            }
-
-            // if (is_null($subject['vocabulary'])) {
-            //     Log::info('Found term without vocabulary: ' . $subject['term']);
-            // }
-
-            if (isset($subject['internal_id'])) {
-
-                // Just undo the effect of getSubjectsAttribute
-                $subject['assigned'] = $this->fromDateTime($subject['assigned']);
-                $subject['internal_id'] = new MongoId($subject['internal_id']);
-                $out[] = $subject;
-
-            } else {
-
-                // Add to items to be queried
-                $queryItems[] = array('vocabulary' => $subject['vocabulary'], 'indexTerm' => $subject['term'], );
-            }
+        if (count($items) == 0) {
+            return [];
         }
 
-        if (count($queryItems) == 0) {
-            $this->attributes['subjects'] = $out;
-            return;
-        }
+        // Fields we keep in the 'documents' collection
+        $localFields = ['internal_id', 'assigned', 'assigner', 'link', 'id'];
 
-        // Go ahead and query the database
-        $query = array('$or' => $queryItems);
-        $results = Subject::whereRaw($query)->get();
-        $toCreate = array();
+        $identifiers = [
+            'subjects' => ['vocabulary', 'indexTerm'],
+            'classifications' => ['system', 'edition', 'number'],
+        ];
 
-        foreach ($subjects as $subject) {
-            if (isset($subject['internal_id'])) continue;
+        $query = array('$or' => array_map(function($x) use ($identifiers, $attr) {
+            $y = array();
+            foreach ($identifiers[$attr] as $id) {
+                if (!array_key_exists($id, $x)) {
+                    throw new \Exception($id . ' is a required field for items in the ' . $attr . ' collection');
+                }
+                $y[$id] = $x[$id];
+            }
+            return $y;
+        }, $items));
 
-            $fnd = false;
+        $toCreate = [];
+        $toUpdate = [];
 
-            foreach ($results as $res) {
+        $currentItems = DB::collection($attr)->whereRaw($query)->get();
 
-                if ($subject['vocabulary'] == $res['vocabulary'] && $subject['term'] == $res['indexTerm']) {
-                    $fnd = true;
-                    $instance = $res;
+        // Loop over the new items
+        foreach ($items as $item) {
 
-                    // Q: Should we do some updating?
-
+            // Loop over the current items
+            $foundItem = false;
+            foreach ($currentItems as $current) {
+                if (array_only($item, $identifiers[$attr]) == array_only($current, $identifiers[$attr])) {
+                    $foundItem = true;
+                    $instance = $current;
+                    break;
                 }
             }
 
-            if (!$fnd) {
-                $subject['indexTerm'] = $subject['term'];
-                $subject['_id'] = new MongoId;   // Pre-allocate ID
-                $toCreate[] = $subject;
-                $results[] = $subject;
-                $instance = $subject;
+            if ($foundItem) {
+                $toUpdate[] = array('current' => $instance, 'new' => $item);
+            } else {
+                $item['_id'] = new MongoId;   // Pre-allocate ID
+                $toCreate[] = $item;
+                $currentItems[] = $item;
+                $instance = $item;
             }
 
-            $r = $this->getSubdocumentById('subjects', $instance['_id']);
+            $r = $this->getSubdocumentById($attr, $instance['_id']);
 
             if (is_null($r)) {
                 $r = array(
                     'internal_id' => new MongoId($instance['_id']),
                     'assigned' => new MongoDate(),
                 );
+                if (isset($item['assigner'])) $r['assigner'] = $item['assigner'];
             }
 
             $out[] = $r;
         }
 
-        // Insert
+        // Insert data into the collection
         if (count($toCreate) != 0) {
-
-            $subjects = array();
-            foreach ($toCreate as $subject) {
-                Log::info(sprintf('CREATE subject heading {vocabulary: "%s", term: "%s"}', $subject['vocabulary'], $subject['term']));
-                $subjects[] = $subject;
+            $new = array();
+            foreach ($toCreate as $item) {
+                $loggable = array_map(function($x) {
+                    if (is_string($x)) return $x;
+                }, $item);
+                Log::info(sprintf('INSERT into %s (%s)',
+                    $attr,
+                    implode(',', $loggable)
+                ));
+                $new[] = $item;
             }
-            DB::collection('subjects')->insert($subjects);
+            DB::collection($attr)->insert($new);
         }
 
-        $this->attributes['subjects'] = $out;
+        // Update data in the 'subjects' collection
+        foreach ($toUpdate as $x) {
+            $fields = array_except($x['new'], $localFields);
+            $dirty = false;
+            foreach ($fields as $key => $val)
+            {
+                if (array_get($x['current'], $key) != $val)
+                {
+                    // $x['current'][$key] = $val;
+                    $dirty = true;
+                    // TEST: fwrite(STDERR, ' ['.$key. ': ' . array_get($x['current'], $key) . ' != ' . $val . ' ] ');
+                }
+            }
+            if ($dirty)
+            {
+                $loggable = array_map(function($x) {
+                    if (is_string($x)) return $x;
+                }, $fields);
+                Log::info(sprintf('UPDATE %s (%s)',
+                    $attr,
+                    implode(',', array_values($loggable))
+                ));
+                $q = DB::collection($attr);
+                foreach ($identifiers[$attr] as $id) {
+                    $q->where($id, '=', $x['new'][$id]);
+                }
+                $q->update($fields);
+            }
+        }
+
+        return $out;
     }
-
-//    public function subjects()
-//    {
-//        // return $this->belongsToMany('Subject');
-//        return $this->embedsMany('SubjectInstance');
-//    }
-
-    /**
-     * Mutator for the 'subjects' attribute
-     *
-     * @param $value
-     */
-//    function setSubjectsAttribute($value)
-//    {
-//        print_r($value);
-//    }
-
-    /**
-     * Accessor for the 'subjects' attribute
-     *
-     * @return array
-     */
-//	public function getSubjectsAttribute()
-//	{
-//		$subjects = array();
-//		foreach ($this->subjects()->get() as $i) {
-//			if (isset($i->identifier)) {
-//				$uri = URL::action('SubjectsController@getId', array('vocabulary' => $i->vocabulary, 'term' => $i->identifier));
-//			} else {
-//				$uri = URL::action('SubjectsController@getId', array('vocabulary' => $i->vocabulary, 'term' => $i->indexTerm));
-//			}
-//			$s = array(
-//				'vocabulary' => $i->vocabulary,
-//				'indexTerm' => $i->indexTerm,
-//				'type' => $i->type,
-//				'uri' => $uri,
-//			);
-//			if (isset($i->id)) $s['local_id'] = $i->id;
-//			if (isset($i->identifier)) $s['id'] = $i->identifier;
-//			$subjects[] = $s;
-//		}
-//
-//		// Sort subject headings by vocabulary
-//		usort($subjects, function($a, $b) {
-//		    return strcmp(array_get($a, 'vocabulary', ''), array_get($b, 'vocabulary', ''));
-//		});
-//
-//		return $subjects;
-//	}
-
-	/* Accessor for the classifications attribute */
-//	public function getClassesAttribute()
-//	{
-//		$classes = array();
-//		foreach ($this->bibliographic['classifications'] as $i) {
-//			$s = $i;
-//			$s['uri'] = URL::action('ClassesController@getId', array('system' => $i['system'], 'number' => $i['number']));
-//			$classes[] = $s;
-//		}
-//
-//		// Sort classes by system
-//		usort($classes, function($a, $b) {
-//		    return strcmp(array_get($a, 'system', ''), array_get($b, 'system', ''));
-//		});
-//
-//		return $classes;
-//	}
 
     /**
      * Accessor for the virtual 'link' attribute
      *
-     * @return array
+     * @return string
      */
     public function getLinkAttribute() {
-        return URL::action('DocumentsController@getShow', array($this->id));
-    }
-
-    /**
-     * Helper method for attributesToArray()
-     *
-     * @param $refs
-     * @param $model
-     * @return mixed
-     */
-    protected function extendAttributes($refs, $model)
-    {
-        $toCopy = array('internal_id', 'assigned', 'assigner');
-        $toRemove = array('documents', 'created_at', 'updated_at', '_id');
-
-        $ids = array_map(function ($x) {
-            return strval($x['internal_id']);
-        }, $refs);
-        $items = $model::whereIn('_id', $ids)->get();
-
-        foreach ($refs as $i => $ref) {
-            $out = array();
-            foreach ($items as $item) {
-                if ($item->id == $ref['internal_id']) {
-                    $out = $item->toArray();
-                    break;
-                }
-            }
-            array_forget($out, $toRemove);
-            foreach ($toCopy as $x) {
-                if (isset($ref[$x])) $out[$x] = $ref[$x];
-            }
-            $refs[$i] = $out;
+        if (is_null($this->id))
+        {
+            throw new \Exception('Document does not have an id assigned yet');
         }
-        return $refs;
+        return URL::action('DocumentsController@getShow', array($this->id));
     }
 
     /**
@@ -571,13 +494,111 @@ class Document extends BaseModel {
             $attributes['bibliographic']['other_form']['link'] = URL::action('DocumentsController@getShow', array($of));
         }
 
-        // Extend classifications
-        $attributes['classifications'] = $this->extendAttributes($attributes['classifications'], 'Classification');
-
-        // Extend subjects
-        $attributes['subjects'] = $this->extendAttributes($attributes['subjects'], 'Subject');
-
         return $attributes;
+    }
+
+    /**
+     * Helper method for relationsToArray() that merges in data
+     * from the related items (subjects/classifications)
+     *
+     * @return array
+     */
+    public function getExpandedRelations($expansionData)
+    {
+        // Fields in the Document model to include:
+        $pivotFields = array('internal_id', 'assigned', 'assigner');
+
+        // Fields on the Subject/Classification model to remove:
+        $hiddenFields = array('documents', 'created_at', 'updated_at', '_id');
+
+        $relations = array();
+        // ('subjects', 'classifications')
+        foreach (array_keys($expansionData) as $property)
+        {
+            $relations[$property] = array();
+
+            foreach ($this->$property as $key => $val) {
+                $relation = array();
+                foreach ($expansionData[$property] as $item) {
+                    if ($item->id == $val['internal_id']) {
+                        $relation = $item->toArray();
+                        break;
+                    }
+                }
+                if (empty($relation))
+                {
+                    Log::warning(sprintf('[%s] Could not find classification with id:%s', 
+                        $this->bibliographic['id'], $val['internal_id'])
+                    );
+                }
+                array_forget($relation, $hiddenFields);
+                foreach ($pivotFields as $x) {
+                    if (isset($val[$x])) {
+                        $relation[$x] = $val[$x];
+                    }
+                }
+                $relations[$property][] = $relation;
+            }
+
+        }
+
+        $relations = $this->flattenDates($relations);
+
+        return $relations;
+    }
+
+    public function relationsToArray()
+    {
+        $s_ids = array_values(array_unique(array_map(function($x) {
+            return strval($x['internal_id']);
+        }, $this->subjects)));
+
+        $c_ids = array_values(array_unique(array_map(function($x) {
+            return strval($x['internal_id']);
+        }, $this->classifications)));
+
+        $relations = array(
+            'subjects' => count($s_ids) ? Subject::whereIn('_id', $s_ids)->get() : [],
+            'classifications' => count($c_ids) ? Classification::whereIn('_id', $c_ids)->get() : [],
+        );
+
+        return $this->getExpandedRelations($relations);
+    }
+
+    /**
+     * Validate the model's attributes.
+     *
+     * @param  array  $rules
+     * @param  array  $messages
+     * @return bool
+     */
+    public function validate(array $rules = array(), array $messages = array())
+    {
+        $v = Validator::make($this->attributes, Document::$rules);
+
+        if ($v->fails()) {
+            $this->errors = $v->messages();
+            return false;
+        }
+
+        $this->errors = null;
+        return true;
+    }
+
+    /**
+     * Save the model to the database.
+     *
+     * @param  array  $options
+     * @return bool
+     */
+    public function save(array $options = array())
+    {
+        if (!$this->validate()) {
+            return false;
+        }
+
+        parent::save($options);
+        return true;
     }
 
 }

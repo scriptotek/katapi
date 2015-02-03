@@ -4,10 +4,12 @@
 </div>
 <ul>
 	<li ng-repeat="volume in volumes">
-		<a href="{{ volume.bibsys_id }}">{{ volume.part_no }}</a>{{
-			volume.year ? ' (' + volume.year + ')' : ''
+		<a ng-href="{{ volume._id ? '/documents/' + volume._id : '/documents?q=id:' + volume.bibliographic.id }}">{{ volume.bibliographic.part_no }}{{
+            volume.bibliographic.year ? ' (' + volume.bibliographic.year + ')' : ''
 		}}{{
-			volume.pages ? ', ' + volume.pages + ' p. ' : ''
-		}}
+            volume.bibliographic.pages ? ', ' + volume.bibliographic.pages + ' p. ' : ''
+		}} {{
+            volume.bibliographic.title
+        }}</a>
 	</li>
 </ul>

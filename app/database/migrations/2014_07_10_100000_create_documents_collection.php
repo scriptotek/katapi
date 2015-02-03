@@ -13,11 +13,20 @@ class CreateDocumentsCollection extends Migration {
 	public function up()
 	{
 		Schema::create('documents', function(Blueprint $collection) {
-		    $collection->unique('bibsys_id');
-		});
+			$collection->unique('bibliographic.id');
+			$collection->index('bibliographic.isbns');
+			$collection->index('holdings.id');
+			$collection->index('holdings.barcode');
 
-		// Prøve Aria?
-		// DB::unprepared('ALTER TABLE `tablename` ENGINE=`Aria` TRANSACTIONAL=1;');
+			// TODO: Would be more effective to have these as sparse indexes,
+			// but then we must fix it so simplemarcparser doesn't return
+			// null values for the id fields, otherwise we'd gain nothing.
+			$collection->index('holdings.part_of.id');
+			$collection->index('holdings.series.id');
+
+			$collection->index('subjects.internal_id');
+			$collection->index('classifications.internal_id');
+		});
 	}
 
 

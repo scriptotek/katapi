@@ -210,28 +210,25 @@ class HarvestBibsys extends Command {
 			}
 
 
+			$attempt = 1;
 			while (true) {
-				$attempt = 1;
 				try {
 					$records->next();
 					break 1;
 				} catch (Scriptotek\Oai\BadRequestError $e) {
 					// OAI-PMH servers really shouldn't throw
 					// random errors now and then, but some do...
-					$attempt++;
 					$this->errorMsg('Bad request. Attempt ' . $attempt . ' of 500. Sleeping 60 secs.');
 					if ($attempt > 500) {
 						throw $e;
 					}
+					$attempt++;
 					sleep(60);
 				}
 			}
 		}
-		// $this->progress->finish();
 
-		// TODO: Purge any subjects in the database that are not in the RDF...
-
-		$this->output->writeln(sprintf('%d records added, %d records changed, %d records removed, %d errored, %d records unchanged', $counts['added'], $counts['changed'], $counts['removed'], $counts['errored'], $counts['unchanged']));
+		$this->output->writeln(sprintf('Harvest completed. Got %d records', $recordsHarvested));
 
 		return true;
 	}

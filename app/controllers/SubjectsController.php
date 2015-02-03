@@ -12,10 +12,6 @@ class SubjectsController extends BaseController {
             );
         }
 
-//        $instance = Subject::where('vocabulary', '=', $vocabulary)
-//            ->where('indexTerm', '=', $term)
-//            ->first();
-
         $instance = Subject::find($id);
 
         if (!$instance) {
@@ -24,10 +20,13 @@ class SubjectsController extends BaseController {
             ));
         }
 
+        $out = $instance->toArray();
+        $out['documents'] = $instance->getDocuments();
+
         switch ($format) {
 
             case '.json':
-                return Response::json($instance);
+                return Response::json($out);
 
             case '.rdf.xml':
             case '.rdf.nt':

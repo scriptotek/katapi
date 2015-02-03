@@ -2,30 +2,31 @@
 
 class ClassesController extends BaseController {
 
-	public function getShow($system, $number)
-	{
-        list($number, $format) = $this->getFormat($number);
+	public function getShow($id)
+    {
+        list($id, $format) = $this->getFormat($id);
         if (is_null($format)) {
-            return $this->negotiateContentType('ClassesController',
-                array('system' => $system, 'number' => $number),
-                'number'
+            return $this->negotiateContentType('SubjectsController',
+                array('id' => $id),
+                'id'
             );
         }
 
-        $instance = Classification::where('system', '=', $system)
-			->where('number', '=', $number)
-			->first();
+        $instance = Classification::find($id);
 
-		if (!$instance) {
-			return Response::json(array(
-				'error' => 'notFound',
-			));
-		}
+        if (!$instance) {
+            return Response::json(array(
+                'error' => 'notFound',
+            ));
+        }
+
+        $out = $instance->toArray();
+        $out['documents'] = $instance->getDocuments();
 
         switch ($format) {
 
             case '.json':
-                return Response::json($instance);
+                return Response::json($out);
 
             case '.rdf.xml':
             case '.rdf.nt':
@@ -37,6 +38,6 @@ class ClassesController extends BaseController {
             default:
                 App::abort(400, 'Unknown format requested');
         }
-	}
+    }
 
 }

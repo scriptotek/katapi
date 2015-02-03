@@ -10,6 +10,7 @@ html {
 }
 body {
   background-color: #ebe8e1;
+  background: url(/textures/cubes.png);
   font-family: 'Open Sans', sans-serif;
 }
 .container .inner {
@@ -146,9 +147,14 @@ h2 {
   margin: 0;
   padding: 0;
 }
+.searchResults > li:first-child {
+  border-top: 1px solid #ccc;
+}
 .searchResults > li {
-  margin: 0 0 .8em 22px;
-  padding: 0;
+  margin: 0 0 .3em 0;
+  padding: 5px 10px 5px 10px;
+  background: #fff;
+  border-bottom: 1px solid #ccc;
 }
 .searchResults h3 {
  font-size: 100%;
@@ -157,11 +163,11 @@ h2 {
  padding: 0;
 }
 .subject:link, .subject:visited {
-
+ color: #D26934;
 }
 .searchResults .subjectSystem {
   display: block;
-  margin: 1px 10px 0 0;
+  margin: 1px 8px 0 8px;
 }
 .searchResults .subjectSystem ul {
   display: inline;

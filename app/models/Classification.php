@@ -45,7 +45,7 @@ class Classification extends BaseModel {
      *
      * @var array
      */
-    protected $appends = array('documents', 'link');
+    protected $appends = array('link');
 
     protected $fillable = array(
         'system',
@@ -54,11 +54,13 @@ class Classification extends BaseModel {
     );
 
     /**
-     * Accessor for the virtual 'documents' attribute
+     * Method to get documents. We're not using an accessor here, since
+     * we don't want the overhead of fetching documents when serializing
+     * the subject as an array using toArray().
      *
      * @return array
      */
-    function getDocumentsAttribute()
+    function getDocuments()
     {
         return $this->getRelatedDocuments('classifications');
     }

@@ -4,13 +4,16 @@
 </div>
 
 <div ng-show="doc && doc.error">
-  {{doc.error}}
+  <h2>Failed to load document(s)</h2>
+  <p style="background:#fee; padding: 2em;">
+  	{{doc.error}}
+  </p>
 </div>
 
 <div ng-show="doc && !doc.error">
 
 	<div style="float: right;">
-		<a target="_self" ng-href="/documents/show/{{ biblio.id }}.json">[JSON]</a>
+		<a target="_self" ng-href="/documents/{{ doc._id }}.json">[JSON]</a>
 	</div>
 
 	<div style="padding: 6px 0; font-size: 85%;">
@@ -56,7 +59,7 @@
 
 				</td>
 			</tr>
-			<tr>
+			<tr ng-show="biblio.publisher">
 				<td>
 					Publisher:
 				</td>
@@ -64,7 +67,7 @@
 					{{ biblio.publisher }}
 				</td>
 			</tr>
-			<tr ng-show="biblio.isbns.length != 0">
+			<tr ng-show="biblio.isbns.length">
 				<td>
 					ISBNs:
 				</td>
@@ -76,21 +79,21 @@
 					</ul>
 				</td>
 			</tr>
-			<tr>
+			<tr ng-show="biblio.creators.length">
 				<td>
 					Creators:
 				</td>
 				<td>
 					<ul>
 						<li ng-repeat="author in biblio.creators">
-							<a ng-show="author.id" ng-href="http://tools.wmflabs.org/bsaut/show/{{ author.id }}">{{ author.name }}</a>
+							<a ng-show="author.id" ng-href="/documents?q=creator:{{ author.id }}">{{ author.name }}</a>
 							<span ng-show="!author.id">{{ author.name }}</span>
 							({{ roles.nb[author.role] || author.role }})
 						</li>
 					</ul>
 				</td>
 			</tr>
-			<tr ng-show="biblio.notes.length != 0">
+			<tr ng-show="biblio.notes.length">
 				<td>
 					Notes:
 				</td>
@@ -108,7 +111,16 @@
 					Volumes:
 				</td>
 				<td>
-					<volumes item-id="{{ biblio.bibsys_id }}"></volumes>
+					<volumes item-id="{{ biblio.id }}"></volumes>
+				</td>
+			</tr>
+
+			<tr ng-show="biblio.is_series">
+				<td>
+					Volumes:
+				</td>
+				<td>
+					<volumes item-id="{{ biblio.id }}"></volumes>
 				</td>
 			</tr>
 
@@ -156,25 +168,26 @@
 				</td>
 			</tr>
 
+			<tr ng-show="biblio.series.length || biblio.part_of">
+				<td>
+					Series:
+				</td>
+				<td>
+					<ul>
+						<li ng-repeat="series in biblio.series">
+							<work ng-show="series.id" item-id="{{ series.id }}" >{{ series.title }}</work>
+							<span ng-show="!series.id">{{ series.title }}</span>
+						</li>
+						<li ng-show="biblio.part_of">
+							{{biblio.part_of.relationship ? biblio.part_of.relationship : 'Part of' }} 
+							<work ng-show="biblio.part_of.id" item-id="{{ biblio.part_of.id }}" ></work>
+							<span ng-show="!biblio.part_of.id">{{ biblio.part_of.title }}</span>
+						</li>
+					</ul>
+				</td>
+			</tr>
+
 		</table>
-
-		<div ng-show="biblio.is_series">
-			is series work		
-		</div>
-
-		<ul ng-show="biblio.series">
-			<li ng-repeat="series in biblio.series">
-				Part of {{ series.title }}
-			</li>
-		</ul>
-		<ul ng-show="biblio.part_of">
-			<li>
-				{{biblio.part_of.relationship}} 
-				<work ng-show="biblio.part_of.bibsys_id" item-id="{{ biblio.part_of.bibsys_id }}" ></work>
-				<span ng-show="!biblio.part_of.bibsys_id">{{ biblio.part_of.title }}</span>
-
-			</li>
-		</ul>
 
 	</div>
 	</div>
@@ -204,7 +217,7 @@
 		</div>
 	</div>
 
-	<div class="panel panel-default">
+	<div class="panel panel-default" ng-show="holdings.length">
 		<!-- Default panel contents -->
 		<div class="panel-heading">Holdings</div>
 

@@ -25,27 +25,31 @@ class DocumentsController extends BaseController {
 	 * @apiSuccess {String} bibliographic.id The Bibsys 'objektid'
 	 * @apiSuccess {String} bibliographic.material The material type. TODO: Document all the possible values
 	 * @apiSuccess {Boolean} bibliographic.electronic Whether the document is electronic (true) or physical (false)
-	 * @apiSuccess {Object[]} bibliographic.creators List of authors/creators
+	 * @apiSuccess {Object[]} bibliographic.creators Array of authors/creators
 	 * @apiSuccess {String} bibliographic.creators.name Author/creator name
 	 * @apiSuccess {String} bibliographic.creators.role E.g. 'main', 'aut', 'edt', 'added', ...
 	 * @apiSuccess {String} bibliographic.creators.authority Bibsys authority identifier
+     *
 	 * @apiSuccessExample {json} Success-Response:
 	 *     HTTP/1.1 200 OK
 	 *     {
      * // TODO: Update to current representation!
      *       "served_by": "bibsys_sru",
-     *       "bibsys_id": "050117416",
-     *       "material": "Book",
-     *       "electronic": false,
-     *       "agency": "NO-TrBIB",
-     *       "record_modified": "2014-11-05 10:54:51",
-     *       "record_created": "2014-11-05 00:00:00",
-     *       "is_series": false,
-     *       "is_multivolume": false,
-     *       "catalogingRules": "katreg",
-     *       "title": "Scattering : scattering and inverse scattering in pure and applied science",
-     *       "part_no": "Vol. 1",
-     *       ...
+     *       "bibliographic": {
+     *         "id": "050117416",
+     *         "material": "Book",
+     *         "electronic": false,
+     *         "agency": "NO-TrBIB",
+     *         "created": "2014-11-05 00:00:00",
+     *         "modified": "2014-11-05 10:54:51",
+     *         "is_series": false,
+     *         "is_multivolume": false,
+     *         "catalogingRules": "katreg",
+     *         "title": "Scattering : scattering and inverse scattering in pure and applied science",
+     *         "part_no": "Vol. 1",
+     *         ...
+     *       },
+     *       "holdings": [{…}, {…}]
      *     }
 	 */
 	public function getShow($id)
@@ -69,16 +73,15 @@ class DocumentsController extends BaseController {
         if ($live) {
             $doc = null;
         } else {
-            $doc = Document::find($id);  // objektid
-                            // TODO: or isbns or holdings.id or holdings.barcode
-//                           ->first();
+            $doc = Document::find($id);
         }
+
 		if ($doc) {
 
 			// Document is fetched from our local DB
 			$doc->served_by = 'local_db';
 
-		} else {
+		} else if (strlen($id) >= 9 && strlen($id) <= 16) {
 
 			// Document is fetched from the BIBSYS SRU service
 
@@ -112,7 +115,9 @@ class DocumentsController extends BaseController {
             // $doc->_id = new MongoId;
             Clockwork::endEvent('parseRecord');
 
-		}
+		} else {
+            return $this->abort(400, 'Document not found in local database.');
+        }
 
         // Test roundtrip
         // $q = $doc->classifications;
@@ -264,6 +269,7 @@ class DocumentsController extends BaseController {
                 'numberOfRecords' => $res->numberOfRecords,
                 'nextRecordPosition' => $res->nextRecordPosition,
                 'documents' => $docs,
+                'query_engine' => 'remote',
             );
         }
 
