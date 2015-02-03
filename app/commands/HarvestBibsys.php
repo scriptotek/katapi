@@ -177,7 +177,7 @@ class HarvestBibsys extends Command {
 				rename(storage_path("harvest/tmp.xml"), storage_path(sprintf("harvest/f_%08d.xml", $currentIndex)));
 			}
 
-			$batch = 100;
+			$batch = 1000;
 			if ($recordsHarvested % $batch == 0) {
 				$dt = microtime(true) - $t1;
 				$dt2 = microtime(true) - $t0;
@@ -196,8 +196,9 @@ class HarvestBibsys extends Command {
 				$recsPerSec = $recordsHarvested / $dt2;
 
 				$this->info(sprintf(
-					'Harvested %d of about %d records (%.2f %%), %sCurrent speed: %.1f recs/s, Avg speed: %.1f recs/s, Mem: %.1f MB.',
-					$recordsHarvested,
+					'%s %d / %d records (%.2f %%), %sCurrent speed: %.1f recs/s, Avg speed: %.1f recs/s, Mem: %.1f MB.',
+					strftime('%Y-%m-%d %H:%M:%S'),
+					$currentIndex,
 					$records->numberOfRecords,
 					$percentage * 100,
 					$eta,
