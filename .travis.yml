@@ -5,6 +5,9 @@ php:
   - 5.5
   - 5.6
 
+services:
+  - mongodb
+
 before_script:
  - composer self-update
  - composer install --dev -o -n
