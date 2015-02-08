@@ -183,7 +183,7 @@ class HarvestBibsys extends Command {
 				$dt2 = microtime(true) - $t0;
 				$mem = round(memory_get_usage()/1024/102.4)/10;
 				$t1 = microtime(true);
-				$percentage = $recordsHarvested / $records->numberOfRecords;
+				$percentage = $currentIndex / $records->numberOfRecords;
 				$eta = '';	
 				if ($percentage < 1.0) {
 					$et = $dt2 / $percentage - $dt2;
@@ -204,8 +204,7 @@ class HarvestBibsys extends Command {
 					$eta,
 					$recsPerSecCur,
 					$recsPerSec,
-					$mem,
-					$recordsHarvested
+					$mem
 				));
 			}
 
@@ -228,7 +227,7 @@ class HarvestBibsys extends Command {
 			}
 		}
 
-		$this->output->writeln(sprintf('Harvest completed. Got %d records', $recordsHarvested));
+		$this->output->writeln(sprintf('Harvest completed. Got %d records in this batch.', $recordsHarvested));
 
 		return true;
 	}
