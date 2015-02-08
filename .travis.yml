@@ -10,7 +10,8 @@ services:
 
 before_script:
  - composer self-update
- - php -i | grep 'Mongo'
+ - echo 'date.timezone = "UTC"' >> ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/travis.ini
+ - echo 'extension = mongo.so' >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
  - composer install --dev -o -n
  - php artisan migrate:install --env="testing"
 
