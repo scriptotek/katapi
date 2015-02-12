@@ -4,7 +4,7 @@
 
   <form class="searchForm" ng-submit="search()" ng-class="{busy:busy}">
     <!--<label for="query">CQL:</label>-->
-    <input type="text" id="query" ng-model="query.q" name="query">
+    <input type="text" id="query" ng-model="query.q" name="query" autofocus>
     <a href="#" class="clearSearch" title="Tøm søk" ng-click="query=''">
       <i class="fa fa-times"></i>
     </a>
@@ -47,118 +47,9 @@
       Spørringen ble ikke forstått lokalt, og ble derfor videresendt til Bibsys.
     </span>
   </div>
-    
+
   <ul class="searchResults fa-ul" infinite-scroll="moreResults()" infinite-scroll-disabled="busy || error" infinite-scroll-distance="4">
-
-    <li ng-repeat="doc in results.documents">
-
-      <h3>
-        <div style="font-size:11px; font-family:monospace; color: #999; float:right; padding-left: 10px;"> {{ doc.bibliographic.id }} </div>
-        <a ng-href="/documents/{{ doc._id }}">{{ doc.bibliographic.title }}{{
-          doc.bibliographic.part_no ? ' – ' + doc.bibliographic.part_no : '' 
-        }}</a>{{
-          (doc.bibliographic.edition || doc.bibliographic.year) ? ' (' + (doc.bibliographic.edition + ' ' + doc.bibliographic.year).trim() + ')' : ''
-
-        }}
-      </h3>
-
-      <!--
-        EMNER OG KLASSER
-        -->
-        <div class="subjectSystem" ng-repeat="(voc, items) in doc.subjectsAndClasses">
-
-
-          <div ng-show="(voc === 'null' && query.show.k) || (voc !== 'null' && (items[0].type == 'subject' && query.show.sh) || (items[0].type == 'class' && query.show.c))">
-            <span style="color: #888">
-              <i class="fa fa-tags"></i>
-              {{ vocabularies[voc] || voc }}:
-            </span>
-            <ul>
-              <li ng-repeat="itm in items">
-                <a class="subject" ng-href="{{ itm.link }}"> {{ itm.term }}</a>
-                <span style="color:#888;" ng-show="itm.extras">
-                  (<!--{{ implode(', ', $itm['extras']) }}-->)
-                </span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-      <!--
-        SERIER OG NOTER
-        -->
-
-      <ul class="seriesAndNotes">
-
-          <li ng-repeat="series in doc.bibliographic.series" ng-show="query.show.se">
-                  <i class="fa fa-angle-double-up"></i> 
-                  Del av serien: {{series.title}}
-                  <span ng-show="series.volume">
-                    (bind/heftenr. {{series.volume}})
-                  </span>
-                  <span ng-show="doc.bibliographic.series.issn">
-                    (ISSN {{doc.bibliographic.series.issn}})
-                  </span>
-              </li>
-
-              <li ng-show="query.show.se && doc.bibliographic.part_of">
-                  <i class="fa fa-angle-double-up"></i> 
-                  Del av flerbindsverket: {{doc.bibliographic.part_of.title}}
-                  <span ng-show="doc.bibliographic.part_of.volume">
-                    (bind/heftenr. {{doc.bibliographic.part_of.volume}})
-                  </span>
-              </li>
-
-              <li ng-show="query.show.se && doc.bibliographic.preceding">
-                <i class="fa fa-angle-double-left"></i> 
-                {{doc.bibliographic.preceding.note}}
-                <span ng-show="!doc.bibliographic.preceding.note">
-                  {{doc.bibliographic.preceding.relationship_type}}
-                  <span ng-repeat="itm in doc.bibliographic.preceding.items">
-                    {{itm.id}} {{itm.related_parts}},
-                  </span>
-                </span>
-              </li>
-
-              <li ng-show="query.show.se && doc.bibliographic.succeeding">
-                <i class="fa fa-angle-double-right"></i> 
-                {{doc.bibliographic.succeeding.note}}
-                <span ng-show="!doc.bibliographic.succeeding.note">
-                  {{doc.bibliographic.succeeding.relationship_type}}
-                  <span ng-repeat="itm in doc.bibliographic.succeeding.items">
-                    {{itm.id}} {{itm.related_parts}},
-                  </span>
-                </span>
-              </li>
-
-              <li ng-repeat="note in doc.bibliographic.notes" ng-show="query.show.n">
-                <i class="fa fa-comment-o"></i> {{note}}
-              </li>
-
-            </ul>
-
-            <ul class="holdings" ng-show="query.show.h">
-                <li ng-repeat="holding in doc.holdings">
-                  <i class="fa fa-hand-o-right"></i> 
-
-                  <span class="collection">{{holding.shelvinglocation}}</span>
-                  {{holding.callcode}}
-                  <span ng-show="holding.circulation_status!=='Available'">(<strong>{{holding.circulation_status}}</strong>)</span>
-                  <span ng-repeat="note in holding.public_notes">
-                      <i class="fa fa-comment-o"></i> {{note}}
-                  </span>
-<!--                   <span ng-repeat="note in holding.nonpublic_notes">
-                      <i class="fa fa-comment-o"></i> {{note}}
-                  </span>
- -->              <span ng-show="holding.holdings">
-                      <i class="fa fa-folder-open-o"></i> {{holding.holdings}}
-                  </span>
-
-                  <!--<small style="color:#888;">({{holding.dokid}})</small>-->
-                </li>
-              </ul>
-
-    </li>   
+    <documentlist docs="results.documents" show="query.show"></documentlist>
   </ul>
 
   <div ng-show="error" class="alert alert-danger" role="alert">FEIL: {{ error }}</div>

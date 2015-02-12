@@ -1,5 +1,5 @@
 
-angular.module('katapi.subjects', ['ngResource', 'katapi.api'])
+angular.module('katapi.subjects', ['ngResource', 'katapi.api', 'katapi.documents'])
 
 .factory('Subject', ['$resource', function ($resource) {
     return $resource('/subjects/:id.json', {id: '@id'}, {
@@ -134,9 +134,43 @@ angular.module('katapi.subjects', ['ngResource', 'katapi.api'])
 
 }])
 
-.controller('SubjectController', ['$scope', 'subjects', function($scope, subjects) {
+.controller('SubjectController', ['$scope', 'subjects', 'Documents', function($scope, subjects, Documents) {
     console.log('Hello from SubjectController');
     console.log('We got ' + subjects.length + ' subjects');
+
+    $scope.show = { 
+      sh: true,
+      k: false,
+      c: false,
+      se: false,
+      n: false,
+      h: false
+    };
+
+    $scope.docs = [];
+
+    function getSearch(query, nextRecordPosition) {
+
+        if (!query || query.length === 0) {
+          return;
+        }
+        $scope.busy = true;
+        Documents.search(query, nextRecordPosition).then(function(results) {
+          console.log('[DocumentsController] Server returned ' + results.documents.length + ' results');
+          // console.log(results);
+          // console.log($scope.docs);
+          Array.prototype.unshift.apply(results.documents, $scope.docs);
+          $scope.docs = results.documents;
+          $scope.busy = false;
+        }, function(error) {
+            console.log('errored');
+            console.log(error);
+          $scope.error = error ? error : 'Søket gikk ut i feil';
+          $scope.busy = false;
+        });
+    }
+
+    getSearch('real:Nøytrinoer', 1);
 
     /*
 

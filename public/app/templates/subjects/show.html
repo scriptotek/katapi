@@ -41,10 +41,7 @@
     <h3>Documents</h3>
 
     <ul>
-        <li ng-repeat="doc in subject.documents">
-            <a href="{{ doc.link }}">{{ doc.title }}</a>
-            ({{doc.edition}} {{doc.year}})
-        </li>
+        <documentlist docs="docs" show="show"></documentlist>
     </ul>
 
 </div>

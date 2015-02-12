@@ -70,9 +70,10 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
   });
 }])
 
-.factory('Documents', ['$q', 'Document', function ($q, Document) {
+.factory('Documents', ['$q', 'Document', 'LocalApi', function ($q, Document, LocalApi) {
 
   return {
+
     get: function(items) {
       var deferred = $q.defer(),
           waitingFor = items.length,
@@ -107,7 +108,18 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
       });
 
       return deferred.promise;    
+    },
+
+    search: function(query, nextRecordPosition) {
+      var deferred = $q.defer();
+      LocalApi.search(query, nextRecordPosition).then(function(results) {
+        deferred.resolve(results);
+      }, function(error) {
+        deferred.reject(error);
+      });
+      return deferred.promise;
     }
+
   };
 
 }])
@@ -144,7 +156,7 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
 
 }])
 
-.controller('DocumentsController', ['$scope', '$location', 'LocalApi', 'Reference', function($scope, $location, LocalApi, Reference) {
+.controller('DocumentsController', ['$scope', '$location', 'Documents', 'Reference', function($scope, $location, Documents, Reference) {
   console.log('[DocumentsController] Hello');
 
   $scope.query = {};
@@ -170,7 +182,7 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
       return;
     }
     $scope.busy = true;
-    LocalApi.search(query, nextRecordPosition).then(function(results) {
+    Documents.search(query, nextRecordPosition).then(function(results) {
       console.log('[DocumentsController] Server returned ' + results.documents.length + ' results');
       // console.log(results);
       Array.prototype.unshift.apply(results.documents, $scope.results.documents);
@@ -423,6 +435,22 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
       scope.biblio = scope.docs[attrs.itemIndex].bibliographic; // convenience
       scope.holdings = scope.docs[attrs.itemIndex].holdings; // convenience
       console.log(scope.doc);
+    }
+  };
+}])
+
+.directive('documentlist', ['LocalApi', function (LocalApi) {
+  return { 
+
+    restrict : 'E',  // element names only
+    replace: true,
+    templateUrl: '/app/templates/documentlist.html',
+    scope: { docs: '=', show: '=' },
+
+    link: function(scope, element, attrs) {
+      console.log('Linking <documentlist>');
+      // console.log(scope.show);
+      // console.log(scope.docs);
     }
   };
 }]);
