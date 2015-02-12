@@ -48,7 +48,7 @@
     </span>
   </div>
     
-  <ul class="searchResults fa-ul" infinite-scroll="moreResults()" infinite-scroll-disabled="busy" infinite-scroll-distance="4">
+  <ul class="searchResults fa-ul" infinite-scroll="moreResults()" infinite-scroll-disabled="busy || error" infinite-scroll-distance="4">
 
     <li ng-repeat="doc in results.documents">
 
