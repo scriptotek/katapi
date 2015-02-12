@@ -140,7 +140,7 @@ return array(
 
 	'papertrail' => array(
 
-		'enable' => false,
+		'enable' => array_get($_ENV, 'PAPERTRAIL_ENABLED'),
 		'host' => array_get($_ENV, 'PAPERTRAIL_HOST'),
 		'port' => array_get($_ENV, 'PAPERTRAIL_PORT'),
 
