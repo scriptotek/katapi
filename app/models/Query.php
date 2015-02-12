@@ -32,6 +32,12 @@ class Query {
             ),*/
         );
 
+        $vocabularies = [
+            'real' => ['collection' => 'subjects', 'field' => 'noubomn'],
+            'tek' => ['collection' => 'subjects', 'field' => 'tekord'],
+            'ddc' => ['collection' => 'classifications', 'field' => 'ddc'],
+        ];
+
         // Very temporary solution:
         if (preg_match('/^id:([0-9a-z-, ]+)$/i', $this->queryString, $matches)) {
             $id = str_replace('-', '', $matches[1]);
@@ -77,7 +83,30 @@ class Query {
                 $q = array($map[$key]['fields'] => $val);
             }
 
-            return $q;
+            return $q;        
+
+        } else if (preg_match('/^(' . implode('|', array_keys($vocabularies)) . '):(.+)$/i', $this->queryString, $matches)) {
+
+            $key = $matches[1];
+            $val = $matches[2];
+            $col = $vocabularies[$key]['collection'];
+            $fld = $vocabularies[$key]['field'];
+
+            if ($col == 'subjects') {
+                $res = Subject::where(['vocabulary' => $fld, 'indexTerm' => $val]);
+            } else {
+                $res = Classification::where(['system' => $fld, 'number' => $val]);
+            }
+
+            $ids = [];
+            foreach ($res->get() as $o) {
+                $ids[] = new MongoId($o->id);
+            }
+            if (!count($ids)) {
+                throw new InvalidQueryException('Subject/class not found');
+            }
+
+            return array($col . '.internal_id' => ['$in' => $ids]);
         }
     }
 
