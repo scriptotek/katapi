@@ -1,16 +1,15 @@
 <?php
 
-use Isbn\Isbn;
-
 class SearchEngine {
 
-    protected function prepare($docs) {
+    protected function success($docs, $count = 0) {
 
         $docs = new Documents($docs);
         $docs = $docs->toArray();
 
         return array(
-            'numberOfRecords' => count($docs),
+            'numberOfRecords' => $count ?: count($docs),
+            'offset' => 0,
             'nextRecordPosition' => null,
             'documents' => $docs,
             'query_engine' => 'local',
@@ -29,75 +28,23 @@ class SearchEngine {
 
     public function ask(Query $query) {
 
-        $map = array(
-            'series' => array(
-                'fields' => array('bibliographic.part_of.id', 'bibliographic.series.id'),
-                'type' => 'id',
-            ),
-            'creator' => array(
-                'fields' => 'bibliographic.creators.id',
-                'type' => 'id'
-            ),
-            'title' => array(
-                'fields' => 'bibliographic.title',
-                'type' => 'text',
-            ),
-        );
-
-
-        // Very temporary solution:
-        if (preg_match('/^id:([0-9a-z-, ]+)$/i', $query->getQueryString(), $matches)) {
-            $id = str_replace('-', '', $matches[1]);
-            $ids = explode(',', $id);
-            $isbn = new Isbn;
-            $q = [];
-            foreach ($ids as $id)
-            {
-                $id = trim($id);
-                    if (strlen($id) == 9) {
-                    $q[] = ['holdings.id' => strtolower($id)];
-                    $q[] = ['holdings.barcode' => strtolower($id)];
-                    $q[] = ['bibliographic.id' => strtoupper($id)];
-                } elseif (strlen($id) == 10) {
-                    $id = strtoupper($id);
-                    $q[] = ['bibliographic.isbns' => $id];
-                    $q[] = ['bibliographic.isbns' => $isbn->translate->to13($id)];
-                } elseif (strlen($id) == 13) {
-                    $id = strtoupper($id);
-                    $q[] = ['bibliographic.isbns' => $id];
-                    $q[] = ['bibliographic.isbns' => $isbn->translate->to10($id)];
-                }
-            }
-            if (!count($q)) {
-                return $this->error('No valid ID given');
-            }
-            $q = ['$or' => $q];
-
-            $res = Document::whereRaw($q)->get();
-
-            return $this->prepare($res);
-        } else if (preg_match('/^(' . implode('|', array_keys($map)) . '):(.+)$/i', $query->getQueryString(), $matches)) {
-
-            $key = $matches[1];
-            $val = $matches[2];
-            if ($map[$key]['type'] == 'text')
-            {
-                $val = new MongoRegex('/' . $val . '/i');
-            }            
-
-            if (is_array($map[$key]['fields'])) {
-                $q = ['$or' => array_map(function($x) use ($val) {
-                    return array($x => $val);
-                }, $map[$key]['fields'])];
-            } else {
-                $q = array($map[$key]['fields'] => $val);
-            }
-
-            return $this->prepare(Document::whereRaw($q)->get());
-
-        } else {
-            return null;
+        try {
+            $mq = $query->getMongoQuery();
+        } catch (InvalidQueryException $e) {
+            Log::error('Invalid query: ' . $e->getMessage());
+            return $this->error('Invalid query: ' . $e->getMessage());
         }
+        if (is_null($mq)) return null;
+
+        try {
+            $cursor = Document::whereRaw($mq);
+            $count = $cursor->count();
+            $docs = $cursor->limit(10)->get();
+        } catch (\MongoCursorTimeoutException $e) {
+            Log::error('MongoDB query timeout. Query was: ' . json_encode($mq, true));
+            return $this->error('Uh oh, the query timed out.');
+        }
+        return $this->success($docs, $count);
 
         // In the future:
         $parser = new Parser('vocabulary:noubå "en \"setning" term:"Flere ord"');
