@@ -178,6 +178,8 @@ angular.module('katapi.documents', ['ngResource', 'katapi.api', 'katapi.hyphenat
 
   function getSearch(query, nextRecordPosition) {
 
+    if ($scope.busy) return;
+
     if (!query || query.length === 0) {
       return;
     }

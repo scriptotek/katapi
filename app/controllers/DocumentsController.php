@@ -213,7 +213,7 @@ class DocumentsController extends BaseController {
 
         $query = new Query($queryString);
         $engine = new SearchEngine();
-        $results = $engine->ask($query);
+        $results = $engine->ask($query, $nextRecordPosition - 1, $count);
 
         if (is_null($results)) { // Engine didn't understand the query, let's try sending it to Bibsys
 
