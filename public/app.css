@@ -89,20 +89,23 @@ h2 {
 }
 
 .clearSearch:link, .clearSearch:visited {
-  border-top: 1px solid #ccc;
-  border-bottom:1px solid #ccc;
-  padding: 5px 20px;
+  padding: 5px 8px;
   font-size:20px;
   color:#B22;
+  font-size: 120%;
 }
 .clearSearch:hover {
   color:#F00;
-  background:#FEE;
+
 }
 
 .searchForm {
   margin: 18px 0;
-  display:flex;
+  display: flex;
+  box-shadow: inset 1px 1px 2px #ccc;
+  border-radius: 2px;
+  border:1px solid #ccc;
+  background: #fefefe;
 }
 .searchForm label {
    border-radius: 6px 0 0 6px;
@@ -116,31 +119,28 @@ h2 {
 }
 .searchForm input {
   /* outline: none; */
-  background: #fefefe;
+  background: none;
   color: #33a16c;
   padding: 6px 12px;
   margin: 0;
   flex:1;
   font-size: 100%;
-
-  border-radius: 6px 0 0 6px;
-  border: 1px solid #ccc;
-  border-right: 0;
+  border: none;
+  outline: none;
 }
 .searchForm button {
-  border: 1px solid #ccc;
   color: #33a16c;
-  border-left: 0;
-  padding: 6px 20px;
-  border-radius: 0 6px 6px 0;
-  background: rgba(0,255,0,0.1);
+  border: none;
+  font-weight: bold;
+  font-size: 120%;
+  padding: 6px 14px 6px 8px;
+  background: none;
 }
 .searchForm button:hover {
-  background: rgba(0,255,0,0.2);
+  color: #33cc6c;
 }
 .searchForm button:active {
-  background: rgba(200,200,200,0.3);
-  border-left: 1px solid #666;
+  color: #33cc6c;
 }
 .searchResults {
   list-style-type: none;
