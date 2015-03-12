@@ -33,8 +33,10 @@ class Query {
         );
 
         $vocabularies = [
+            'noubomn' => ['collection' => 'subjects', 'field' => 'noubomn'],
             'real' => ['collection' => 'subjects', 'field' => 'noubomn'],
             'tek' => ['collection' => 'subjects', 'field' => 'tekord'],
+            'humord' => ['collection' => 'subjects', 'field' => 'humord'],
             'ddc' => ['collection' => 'classifications', 'field' => 'ddc'],
         ];
 

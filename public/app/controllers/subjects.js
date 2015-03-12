@@ -170,8 +170,6 @@ angular.module('katapi.subjects', ['ngResource', 'katapi.api', 'katapi.documents
         });
     }
 
-    getSearch('real:Nøytrinoer', 1);
-
     /*
 
      $subjectsAndClasses = [];
@@ -272,6 +270,7 @@ angular.module('katapi.subjects', ['ngResource', 'katapi.api', 'katapi.documents
 
     if (subjects.length == 1) {
         $scope.subject = subjects[0];
+        getSearch(subjects[0].vocabulary + ':' + subjects[0].indexTerm, 1);
     }
 
 }]);
