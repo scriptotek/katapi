@@ -28,6 +28,8 @@ class SearchEngine {
 
     public function ask(Query $query, $skip = 0, $limit = 25) {
 
+        if ($skip < 0) $skip = 0;
+
         try {
             $mq = $query->getMongoQuery();
         } catch (InvalidQueryException $e) {
